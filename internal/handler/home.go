@@ -1,7 +1,20 @@
 package handler
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/Milad75Rasouli/online-video-player/internal/config"
+	"github.com/gofiber/fiber/v2"
+)
 
-func GetHome(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+type Home struct {
+	Cfg config.Config
+}
+
+func (h *Home) GetHome(c *fiber.Ctx) error {
+	return c.Render("home", fiber.Map{
+		"Title": h.Cfg.WebsiteTitle, //TODO: take from .env
+		"Name":  "Milad",
+	})
+}
+func (h *Home) Register(c fiber.Router) {
+	c.Get("/", h.GetHome)
 }

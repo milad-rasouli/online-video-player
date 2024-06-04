@@ -7,8 +7,10 @@ import (
 )
 
 type Config struct {
-	Password string
-	ProgramPort string
+	Password     string
+	ProgramPort  string
+	Debug        string
+	WebsiteTitle string
 }
 
 func (c *Config) Read() error {
@@ -21,5 +23,7 @@ func (c *Config) Read() error {
 	}
 	c.Password = os.Getenv("USER_PASSWORD")
 	c.ProgramPort = os.Getenv("PROGRAM_PORT")
+	c.Debug = os.Getenv("DEBUG")
+	c.WebsiteTitle = os.Getenv("WEBSITE_TITLE")
 	return nil
 }
