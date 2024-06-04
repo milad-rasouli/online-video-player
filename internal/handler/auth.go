@@ -13,6 +13,11 @@ func (a *Auth) GetSignIn(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+func (a Auth) POSTUpdateToken(c *fiber.Ctx) error {
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func (a *Auth) Register(c fiber.Router) {
 	c.Get("/", a.GetSignIn)
+	c.Post("/update-token", a.POSTUpdateToken)
 }
