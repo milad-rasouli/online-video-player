@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Password string
+	ProgramPort string
 }
 
 func (c *Config) Read() error {
@@ -19,5 +20,6 @@ func (c *Config) Read() error {
 		return err
 	}
 	c.Password = os.Getenv("USER_PASSWORD")
+	c.ProgramPort = os.Getenv("PROGRAM_PORT")
 	return nil
 }
