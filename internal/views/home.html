@@ -11,7 +11,7 @@
     <div class="container">
         <div class="row">
             <div class="col-12">
-                <video id="videoPlayer" width="320" height="240" controls>
+                <video id="videoPlayer" width="320" height="240" src="/static/video/1.mp4" controls>
                 </video>
             </div>
         </div>
@@ -27,26 +27,33 @@
         var socket = new WebSocket('ws://localhost:5000/video/control'); //TODO: take from .env
 
         video.onplay = function() {
+            console.log("it is played");
             socket.send(JSON.stringify({ action: 'play' }));
         };
 
         video.onpause = function() {
+            console.log("it is paused");
             socket.send(JSON.stringify({ action: 'pause' }));
         };
 
         video.onseeked = function() {
+            console.log("it is seeked");
             socket.send(JSON.stringify({ action: 'seek', time: video.currentTime }));
         };
 
         socket.onmessage = function(e) {
             var data = JSON.parse(e.data);
             if (data.action === 'pause') {
+                console.log("onMessage: pause is clicked");
                 video.pause();
             } else if (data.action === 'play') {
+                console.log("onMessage: play is clicked");
                 video.play();
             } else if (data.action === 'seek') {
+                console.log("onMessage: seek is clicked");
                 video.currentTime = data.time;
             } else if (data.action === 'changeVideo') {
+                console.log("onMessage: changeVideo is clicked");
                 video.src = data.src;
                 video.load();
             }

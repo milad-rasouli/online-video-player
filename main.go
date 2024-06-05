@@ -44,11 +44,22 @@ func main() {
 		authHandler := handler.Auth{
 			Cfg: cfg,
 		}
+		// videoHandler := handler.Video{
+		// 	Cfg: cfg,
+		// }
+		uploadHandler := handler.Upload{
+			Cfg: cfg,
+		}
+
 		homeGroup := app.Group("/")
 		authGroup := app.Group("/auth")
+		// videoGroup := app.Group("/video")
+		uploadGroup := app.Group("/upload")
 
 		homeHandler.Register(homeGroup)
 		authHandler.Register(authGroup)
+		// videoHandler.Register(videoGroup)
+		uploadHandler.Register(uploadGroup)
 	}
 
 	app.Use("/ws", func(c *fiber.Ctx) error {
