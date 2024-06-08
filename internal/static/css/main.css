@@ -7,7 +7,7 @@ html {
   height: -webkit-fill-available;
 }
 
-#log {
+/* #log {
   background: white;
   margin: 0;
   padding: 0.5em 0.5em 0.5em 0.5em;
@@ -17,9 +17,9 @@ html {
   right: 0.5em;
   bottom: 3em;
   overflow: auto;
-}
+} */
 
-#form {
+/* #form {
   padding: 0 0.5em 0 0.5em;
   margin: 0;
   position: absolute;
@@ -27,4 +27,4 @@ html {
   left: 0px;
   width: 100%;
   overflow: hidden;
-}
+} */

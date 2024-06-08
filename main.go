@@ -66,5 +66,5 @@ func main() {
 	}
 
 	app.Static("/static", "./internal/static")
-	app.Listen(cfg.ProgramPort)
+	log.Fatal(app.Listen(cfg.ProgramPort))
 }
