@@ -11,54 +11,71 @@
     <div class="container">
         <div class="row">
             <div class="col-12">
-                <video id="videoPlayer" width="320" height="240" src="/static/video/1.mp4" controls>
-                </video>
+                <!-- <video id="videoPlayer" class="w-100" height="450px" src="/static/video/1.mp4" controls>
+                </video> -->
             </div>
         </div>
         <div class="row">
-            <div class="col-8">chat box</div>
+            <div class="col-8">
+                <div id="log"></div>
+                <form id="form">
+                    <input type="submit" value="Send" />
+                    <input type="text" id="msg" size="64" autofocus autocomplete="off" />
+                </form>
+            </div>
             <div class="col-4">list of video</div>
         </div>
     </div>
 
-    <script>
-        var video = document.getElementById('videoPlayer');
-        var video = document.getElementById('videoPlayer');
-        var socket = new WebSocket('ws://localhost:5000/video/control'); //TODO: take from .env
-
-        video.onplay = function() {
-            console.log("it is played");
-            socket.send(JSON.stringify({ action: 'play' }));
-        };
-
-        video.onpause = function() {
-            console.log("it is paused");
-            socket.send(JSON.stringify({ action: 'pause' }));
-        };
-
-        video.onseeked = function() {
-            console.log("it is seeked");
-            socket.send(JSON.stringify({ action: 'seek', time: video.currentTime }));
-        };
-
-        socket.onmessage = function(e) {
-            var data = JSON.parse(e.data);
-            if (data.action === 'pause') {
-                console.log("onMessage: pause is clicked");
-                video.pause();
-            } else if (data.action === 'play') {
-                console.log("onMessage: play is clicked");
-                video.play();
-            } else if (data.action === 'seek') {
-                console.log("onMessage: seek is clicked");
-                video.currentTime = data.time;
-            } else if (data.action === 'changeVideo') {
-                console.log("onMessage: changeVideo is clicked");
-                video.src = data.src;
-                video.load();
+    <script type="text/javascript">
+        window.onload = function () {
+            console.log("windows onload is called!")
+            var conn;
+            var msg = document.getElementById("msg");
+            var log = document.getElementById("log");
+        
+            function appendLog(item) {
+                var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+                log.appendChild(item);
+                if (doScroll) {
+                    log.scrollTop = log.scrollHeight - log.clientHeight;
+                }
+            }
+        
+            document.getElementById("form").onsubmit = function () {
+                if (!conn) {
+                    return false;
+                }
+                if (!msg.value) {
+                    return false;
+                }
+                conn.send(msg.value);
+                msg.value = "";
+                return false;
+            };
+        
+            if (window["WebSocket"]) {
+                conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
+                console.log(conn)
+                conn.onclose = function (evt) {
+                    var item = document.createElement("div");
+                    item.innerHTML = "<b>Connection closed.</b>";
+                    appendLog(item);
+                };
+                conn.onmessage = function (evt) {
+                    var messages = evt.data.split('\n');
+                    for (var i = 0; i < messages.length; i++) {
+                        var item = document.createElement("div");
+                        item.innerText = messages[i];
+                        appendLog(item);
+                    }
+                };
+            } else {
+                var item = document.createElement("div");
+                item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+                appendLog(item);
             }
         };
-
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>
