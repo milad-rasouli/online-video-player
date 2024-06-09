@@ -7,10 +7,24 @@ html {
   height: -webkit-fill-available;
 }
 
-main {
-  height: 100vh;
-  height: -webkit-fill-available;
-  max-height: 100vh;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
+/* #log {
+  background: white;
+  margin: 0;
+  padding: 0.5em 0.5em 0.5em 0.5em;
+  position: absolute;
+  top: 0.5em;
+  left: 0.5em;
+  right: 0.5em;
+  bottom: 3em;
+  overflow: auto;
+} */
+
+/* #form {
+  padding: 0 0.5em 0 0.5em;
+  margin: 0;
+  position: absolute;
+  bottom: 1em;
+  left: 0px;
+  width: 100%;
+  overflow: hidden;
+} */

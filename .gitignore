@@ -22,5 +22,5 @@ go.work
 go.work.sum
 
 bin
-internal/static/video/1.mp4
-internal/static/video/2.mp4
+*.mp4
+*.mkv
