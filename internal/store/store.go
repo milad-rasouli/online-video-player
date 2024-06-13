@@ -1,8 +1,12 @@
 package store
 
-import "github.com/Milad75Rasouli/online-video-player/internal/model"
+import (
+	"context"
+
+	"github.com/Milad75Rasouli/online-video-player/internal/model"
+)
 
 type MessageStore interface {
-	Save(model.Message) error
-	GetAll() ([]model.Message, error)
+	Save(context.Context, model.Message) error
+	GetAll(context.Context) ([]model.Message, error)
 }
