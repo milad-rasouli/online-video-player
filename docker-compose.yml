@@ -1,0 +1,10 @@
+# docker exec -it redis sh
+
+version: "3.8"
+services:
+  redis:
+    container_name: redis
+    image: redis:7.2-rc
+    ports:
+      - "6379:6379"
+    network_mode: host
