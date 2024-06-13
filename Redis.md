@@ -14,77 +14,38 @@ LPUSH messages message:2
 # A new user joins the chat and retrieves the messages
 SORT messages BY *->timestamp GET *->user_id GET *->message_text
 ```
->[! TIP]
-> set expire time ``` EXPIRE message:1 1 ```
+
+> [! TIP]
+> set expire time `EXPIRE message:1 1`
 
 ## LUA scripting
 
-To add a chat message:
-```bash
--- The script takes 3 arguments: message_id, user_id, and message_text
-local message_id = KEYS[1]
-local user_id = ARGV[1]
-local message_text = ARGV[2]
-
--- Get the current time in seconds (Unix timestamp)
-local time = redis.call('TIME')
-local timestamp = time[1]
-
--- Store the message details as a hash
-redis.call('HSET', message_id, 'user_id', user_id, 'message_text', message_text, 'timestamp', timestamp)
-
--- Set an expiration time of 60 seconds for the message
-redis.call('EXPIRE', message_id, 60)
-
--- Add the message_id to a list
-redis.call('LPUSH', 'messages', message_id)
-
-
-
--- The script takes 3 arguments: message_id, user_id, and message_text
-local message_id = KEYS[1]
-local user_id = ARGV[1]
-local message_text = ARGV[2]
-
--- Get the current time in seconds (Unix timestamp)
-local time = redis.call('TIME')
-local timestamp = time[1]
-
--- Store the message details as a hash
-redis.call('HSET', message_id, 'user_id', user_id, 'message_text', message_text, 'timestamp', timestamp)
-
--- Set an expiration time of 60 seconds for the message
-redis.call('EXPIRE', message_id, 60)
-
-redis.call('LPUSH', 'messages', message_id)
-```
-
+### Save a message in Redis:
 
 ```bash
-SCRIPT LOAD "local message_id = KEYS[1] local user_id = ARGV[1] local message_text = ARGV[2] local time = redis.call('TIME') local timestamp = time[1] redis.call('HSET', message_id, 'user_id', user_id, 'message_text', message_text, 'timestamp', timestamp) redis.call('EXPIRE', message_id, 60) redis.call('LPUSH', 'messages', message_id)"
+SCRIPT LOAD "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], 60) redis.call('LPUSH', 'messages', KEYS[1])"
 
-"3e8d55799190514aae47977749f3c7c53b40e4df"
+"811c8cd082f7823c009788a36b9b407bb0cdf725"
 ```
 
-```bash 
-EVALSHA "3e8d55799190514aae47977749f3c7c53b40e4df" 1 message:10 user1 "hello world!"
-```
-
-
-## Clean up nil parameters
+### Inserting some dummy message
 
 ```bash
-local messages = redis.call('LRANGE', 'messages', 0, -1)
-for i, message_id in ipairs(messages) do
-    if not redis.call('EXISTS', message_id) then
-        redis.call('LREM', 'messages', 0, message_id)
-    end
-end
+EVALSHA "811c8cd082f7823c009788a36b9b407bb0cdf725" 1 message:2 user2 "Hi, everyone!" 1620138345
+EVALSHA "811c8cd082f7823c009788a36b9b407bb0cdf725" 1 message:3 user3 "Good afternoon!" 1620138445
+EVALSHA "811c8cd082f7823c009788a36b9b407bb0cdf725" 1 message:1 user1 "Hello, world!" 1620138245
+
+```
+
+## Retuning message
+
+```bash
+
+SCRIPT LOAD " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
+
+"ad22087b1a20fa647e991e5a566c31fdf919fbfb"
 ```
 
 ```bash
-SCRIPT LOAD "local messages = redis.call('LRANGE', 'messages', 0, -1) for i, message_id in ipairs(messages) do if not redis.call('EXISTS', message_id) then redis.call('LREM', 'messages', 0, message_id) end end"
-
-"3c514d4d34fe788fff4fef9c04ec7aa27fc8b19c"
+EVALSHA "ad22087b1a20fa647e991e5a566c31fdf919fbfb" 1 messages
 ```
-

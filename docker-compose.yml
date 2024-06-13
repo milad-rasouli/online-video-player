@@ -1,3 +1,5 @@
+# docker exec -it redis sh
+
 version: "3.8"
 services:
   redis:
