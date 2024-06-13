@@ -2,18 +2,21 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
 	"github.com/redis/rueidis"
 )
 
-const (
-	AddChatMessageScript = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], 60) redis.call('LPUSH', 'messages', KEYS[1]) return 0"
-	GetChatMessageScript = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
+const ( //TODO: Get the expiration time from configuration
+	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], 60) redis.call('LPUSH', 'messages', KEYS[1]) return 0"
+	GetChatMessageScript  = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
+	MAX_LENGTH_OF_MESSAGE = 6
 )
 
 type RedisMessageStore struct {
@@ -53,7 +56,7 @@ func (m *RedisMessageStore) modelMessageToRedis(msg model.Message) []string {
 func (m *RedisMessageStore) messageIDToRedis() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.messageID++
+	m.messageID++ // TODO: it should be replace with uuid
 	return []string{strconv.FormatUint(m.messageID, 10)}
 }
 func (m *RedisMessageStore) Save(ctx context.Context, msg model.Message) error {
@@ -61,15 +64,63 @@ func (m *RedisMessageStore) Save(ctx context.Context, msg model.Message) error {
 	return err
 }
 
+func (m *RedisMessageStore) messageListID() []string {
+	return []string{"messages"}
+}
+
 func (m *RedisMessageStore) GetAll(ctx context.Context) ([]model.Message, error) {
-	var (
-		messages []model.Message
-	)
-	list, err := m.getAllScript.Exec(ctx, m.client, []string{}, []string{}).ToArray()
+	var messages []model.Message
+	list, err := m.getAllScript.Exec(ctx, m.client, m.messageListID(), []string{}).ToArray()
 	if err != nil {
 		return messages, err
 	}
-	fmt.Printf("data is : %+v\n", list)
+	for _, msg := range list {
+		data, err := msg.ToArray()
+		if err != nil {
+			return messages, err
+		}
+		if len(data) > MAX_LENGTH_OF_MESSAGE {
+			continue
+		}
 
+		sender, err := parseJSON(data[1].String())
+		if err != nil {
+			return messages, err
+		}
+
+		body, err := parseJSON(data[3].String())
+		if err != nil {
+			return messages, err
+		}
+
+		ct, err := parseJSON(data[5].String())
+		if err != nil {
+			return messages, err
+		}
+
+		createAt, err := strconv.ParseInt(ct.Value, 10, 64)
+		if err != nil {
+			return messages, err
+		}
+
+		message := model.Message{
+			Sender:    sender.Value,
+			Body:      body.Value,
+			CreatedAt: time.Unix(createAt, 0),
+		}
+		messages = append(messages, message)
+	}
+	fmt.Println("    ")
 	return messages, nil
+}
+
+type ValueType struct {
+	Value string `json:"Value"`
+	Type  string `json:"Type"`
+}
+
+func parseJSON(jsonStr string) (ValueType, error) {
+	var blobString ValueType
+	err := json.Unmarshal([]byte(jsonStr), &blobString)
+	return blobString, err
 }

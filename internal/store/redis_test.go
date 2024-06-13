@@ -36,12 +36,22 @@ func TestRedis(t *testing.T) {
 			CreatedAt: time.Now().Add(time.Minute),
 		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
 	defer cancel()
+
 	{
 		for _, msg := range messages {
 			redis.Save(ctx, msg)
 		}
+	}
+
+	{
+		data, err := redis.GetAll(ctx)
+		assert.NoError(t, err)
+
+		// assert.Equal(t, messages, data)
+		fmt.Println(data)
+
 	}
 	fmt.Printf("Test is done")
 }
