@@ -11,6 +11,7 @@ type Config struct {
 	ProgramPort  string
 	Debug        string
 	WebsiteTitle string
+	RedisAddress string
 }
 
 func (c *Config) Read() error {
@@ -25,5 +26,6 @@ func (c *Config) Read() error {
 	c.ProgramPort = os.Getenv("PROGRAM_PORT")
 	c.Debug = os.Getenv("DEBUG")
 	c.WebsiteTitle = os.Getenv("WEBSITE_TITLE")
+	c.RedisAddress = os.Getenv("REDIS_ADDRESS")
 	return nil
 }

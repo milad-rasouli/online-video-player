@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
+	"github.com/Milad75Rasouli/online-video-player/internal/store"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,24 +16,27 @@ type client struct {
 	mu        sync.Mutex
 }
 type Chat struct {
-	cfg        config.Config
 	clients    map[*websocket.Conn]*client // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
 	register   chan *websocket.Conn
 	broadcast  chan string
 	unregister chan *websocket.Conn
+	cfg        config.Config
+	redis      store.MessageStore
 }
 
-func NewChat(cfg config.Config) *Chat {
+func NewChat(cfg config.Config, redis store.MessageStore) *Chat {
 	var clients = make(map[*websocket.Conn]*client) // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
 	var register = make(chan *websocket.Conn)
 	var broadcast = make(chan string)
 	var unregister = make(chan *websocket.Conn)
+
 	return &Chat{
 		cfg:        cfg,
 		clients:    clients,
 		register:   register,
 		broadcast:  broadcast,
 		unregister: unregister,
+		redis:      redis,
 	}
 }
 
@@ -72,6 +76,7 @@ func (ch *Chat) ChatWebsocketAcceptorMiddleware(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusUpgradeRequired)
 }
 
+// this should be shutdown properly. in the case i mean
 func (ch *Chat) runHub() {
 	for {
 		select {

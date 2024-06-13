@@ -5,26 +5,21 @@ import (
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/handler"
+	"github.com/Milad75Rasouli/online-video-player/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
-	"github.com/gofiber/websocket/v2"
 )
 
-type Message struct {
-	Action string `json:"action"`
-	Time   int    `json:"time,omitempty"`
-	Src    string `json:"src,omitempty"`
-}
-
-var clients = make(map[*websocket.Conn]bool)
-
 func main() {
+
 	cfg := config.Config{}
 	err := cfg.Read()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("%+v\n", cfg)
+
+	messageStore, err := store.NewRedisMessageStore(cfg)
 
 	engine := html.New("internal/views/", ".html")
 
@@ -50,7 +45,7 @@ func main() {
 		uploadHandler := handler.Upload{
 			Cfg: cfg,
 		}
-		chatHandler := handler.NewChat(cfg)
+		chatHandler := handler.NewChat(cfg, messageStore)
 
 		homeGroup := app.Group("/")
 		authGroup := app.Group("/auth")
