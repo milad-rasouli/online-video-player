@@ -10,11 +10,12 @@ import (
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
+	"github.com/google/uuid"
 	"github.com/redis/rueidis"
 )
 
-const ( //TODO: Get the expiration time from configuration
-	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], 60) redis.call('LPUSH', 'messages', KEYS[1]) return 0"
+const (
+	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], %s) redis.call('LPUSH', 'messages', KEYS[1]) return 0"
 	GetChatMessageScript  = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
 	MAX_LENGTH_OF_MESSAGE = 6
 )
@@ -24,8 +25,8 @@ type RedisMessageStore struct {
 	client       rueidis.Client
 	saveScript   *rueidis.Lua
 	getAllScript *rueidis.Lua
-	messageID    uint64
-	mu           sync.RWMutex
+	// messageID    uint64
+	mu sync.RWMutex
 }
 type DisposeFunc func()
 
@@ -35,7 +36,9 @@ func NewRedisMessageStore(cfg config.Config) (*RedisMessageStore, DisposeFunc, e
 		return &RedisMessageStore{}, nil, err
 	}
 
-	saveScript := rueidis.NewLuaScript(AddChatMessageScript)
+	timeModifiedAddChatMessageScript := fmt.Sprintf(AddChatMessageScript, cfg.RedisChatExp)
+	fmt.Println("AddChatMessageScript: ", timeModifiedAddChatMessageScript)
+	saveScript := rueidis.NewLuaScript(timeModifiedAddChatMessageScript)
 	getAllScript := rueidis.NewLuaScript(GetChatMessageScript)
 
 	return &RedisMessageStore{
@@ -43,7 +46,6 @@ func NewRedisMessageStore(cfg config.Config) (*RedisMessageStore, DisposeFunc, e
 			client:       redisClient,
 			saveScript:   saveScript,
 			getAllScript: getAllScript,
-			messageID:    1,
 		}, func() {
 			redisClient.Close()
 		}, nil
@@ -54,10 +56,7 @@ func (m *RedisMessageStore) modelMessageToRedis(msg model.Message) []string {
 }
 
 func (m *RedisMessageStore) messageIDToRedis() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.messageID++ // TODO: it should be replace with uuid
-	return []string{strconv.FormatUint(m.messageID, 10)}
+	return []string{"msg" + uuid.New().String()}
 }
 func (m *RedisMessageStore) Save(ctx context.Context, msg model.Message) error {
 	_, err := m.saveScript.Exec(ctx, m.client, m.messageIDToRedis(), m.modelMessageToRedis(msg)).ToInt64()
@@ -110,7 +109,6 @@ func (m *RedisMessageStore) GetAll(ctx context.Context) ([]model.Message, error)
 		}
 		messages = append(messages, message)
 	}
-	fmt.Println("    ")
 	return messages, nil
 }
 

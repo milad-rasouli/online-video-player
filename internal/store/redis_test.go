@@ -14,6 +14,7 @@ import (
 func TestRedis(t *testing.T) {
 	cfg := config.Config{
 		RedisAddress: "127.0.0.1:6379",
+		RedisChatExp: "10",
 	}
 	redis, disposeRedis, err := NewRedisMessageStore(cfg)
 	assert.NoError(t, err)
@@ -48,10 +49,8 @@ func TestRedis(t *testing.T) {
 	{
 		data, err := redis.GetAll(ctx)
 		assert.NoError(t, err)
-
 		// assert.Equal(t, messages, data)
 		fmt.Println(data)
 
 	}
-	fmt.Printf("Test is done")
 }
