@@ -11,7 +11,7 @@ type Home struct {
 
 func (h *Home) GetHome(c *fiber.Ctx) error {
 	return c.Render("home", fiber.Map{
-		"Title": h.Cfg.WebsiteTitle, //TODO: take from .env
+		"Title": h.Cfg.WebsiteTitle,
 		"Name":  "Milad",
 	})
 }
