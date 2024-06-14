@@ -19,7 +19,7 @@
             <div class="col-8 p-0">
                 <form id="form" class="row">
                     <div class="col-8">
-                        <input placeholder="Leave a Message Here" class="form-control bg-info text-light" type="text" id="msg" autofocus autocomplete="off" />
+                        <input minlength="1" maxlength="500" placeholder="Leave a Message Here" class="form-control bg-info text-light" type="text" id="msg" autofocus autocomplete="off" />
                     </div>
                     <div class="col-4">
                         <input class="btn btn-warning" type="submit" value="Send" />
@@ -32,11 +32,10 @@
     </div>
 
     <script type="text/javascript">
-        var name = {{.Name}};
+        var Sender = {{.Name}};
         if(name !=undefined){
-            console.log("welcome home "+ name);
+            console.log("welcome home "+ Sender);
         }
-
 
         function sendAccessTokenRequest() {
             // console.log("sent a access token request");
@@ -75,7 +74,7 @@
             var conn;
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
-        
+
             function appendLog(item) {
                 var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
                 log.appendChild(item);
@@ -91,8 +90,11 @@
                 if (!msg.value) {
                     return false;
                 }
-                
-                conn.send(msg.value);
+                let request = {
+                    "sender": Sender,
+                    "body": msg.value,
+                };
+                conn.send(JSON.stringify(request));
                 msg.value = "";
                 return false;
             };

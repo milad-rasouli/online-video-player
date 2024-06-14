@@ -1,10 +1,15 @@
 package handler
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
+	"github.com/Milad75Rasouli/online-video-player/internal/model"
+	"github.com/Milad75Rasouli/online-video-player/internal/request"
 	"github.com/Milad75Rasouli/online-video-player/internal/store"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -62,13 +67,68 @@ func (ch *Chat) GetWebsocket(c *websocket.Conn) {
 
 		if messageType == websocket.TextMessage {
 			// Broadcast the received message
-			ch.broadcast <- string(message)
+			var (
+				parsedMsg request.Message
+				modelMsg  = model.Message{
+					CreatedAt: time.Now(),
+				}
+				err error
+				msg string
+			)
+			err = json.Unmarshal(message, &parsedMsg)
+			if err != nil {
+				log.Println("websocket json unmarshal error ", string(message))
+				msg, err = ch.ErrorMessage("SYSTEM: Send a valid message please!")
+				ch.broadcast <- msg
+				if err != nil {
+					log.Println("websocket json marshal error message", string(message))
+				}
+				continue
+			}
+			err = parsedMsg.Validate()
+			if err != nil {
+				log.Println("websocket invalid request")
+				msg, err = ch.ErrorMessage("SYSTEM: " + err.Error())
+				ch.broadcast <- msg
+				if err != nil {
+					log.Println("websocket json marshal error message", string(err.Error()))
+				}
+				continue
+			}
+
+			modelMsg.Body = parsedMsg.Body
+			modelMsg.Sender = parsedMsg.Sender
+			//TODO: store in redis
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+			defer cancel()
+			ch.redis.Save(ctx, modelMsg)
+			
+			finalMsg, err := json.Marshal(modelMsg)
+			if err != nil {
+				log.Println("websocket unable to make model user")
+				msg, err = ch.ErrorMessage("SYSTEM: " + err.Error())
+				ch.broadcast <- msg
+				if err != nil {
+					log.Println("websocket json marshal error message", string(err.Error()))
+				}
+				continue
+			}
+			ch.broadcast <- string(finalMsg)
 		} else {
 			log.Println("websocket message received of type", messageType)
 		}
 	}
 }
 
+func (ch *Chat) ErrorMessage(msg string) (string, error) {
+	err := struct {
+		Error string `json:"error"`
+	}{
+		Error: msg,
+	}
+	errMsg, er := json.Marshal(err)
+	return string(errMsg), er
+}
 func (ch *Chat) ChatWebsocketAcceptorMiddleware(c *fiber.Ctx) error {
 	if websocket.IsWebSocketUpgrade(c) {
 		return c.Next()
@@ -97,7 +157,6 @@ func (ch *Chat) runHub() {
 					if err := connection.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
 						c.isClosing = true
 						log.Println("write error:", err)
-
 						connection.WriteMessage(websocket.CloseMessage, []byte{})
 						connection.Close()
 						ch.unregister <- connection
@@ -108,7 +167,6 @@ func (ch *Chat) runHub() {
 		case connection := <-ch.unregister:
 			// Remove the client from the hub
 			delete(ch.clients, connection)
-
 			log.Println("connection unregistered")
 		}
 	}
