@@ -4,12 +4,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
 	"github.com/golang-jwt/jwt/v5"
-)
-
-const (
-	AccessTokenExpireAfter = 8 // Hours
 )
 
 var (
@@ -21,20 +18,20 @@ var (
 )
 
 type AccessJWT struct {
-	SecretKey string
+	cfg config.Config
 }
 
-func NewAccessJWT(secret string) AccessJWT {
-	return AccessJWT{SecretKey: secret}
+func NewAccessJWT(cfg config.Config) AccessJWT {
+	return AccessJWT{cfg: cfg}
 }
 
 func (j AccessJWT) Create(jwtUser model.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"full_name": jwtUser.FullName,
-		"exp":       time.Now().Add(time.Hour * AccessTokenExpireAfter).Unix(),
+		"exp":       time.Now().Add(time.Minute * time.Duration(j.cfg.JWtExpireTime)).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(j.SecretKey))
+	tokenString, err := token.SignedString([]byte(j.cfg.JWTSecret))
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +39,6 @@ func (j AccessJWT) Create(jwtUser model.User) (string, error) {
 	return tokenString, nil
 }
 
-// Caution: the jwtUser "InitiateTime" won't effect the final result. it's always time.Now()
 func (j AccessJWT) VerifyParse(tokenString string) (model.User, error) {
 	var jwtUser model.User
 
@@ -51,7 +47,7 @@ func (j AccessJWT) VerifyParse(tokenString string) (model.User, error) {
 			return nil, InvalidJWTMethod
 		}
 
-		return []byte(j.SecretKey), nil
+		return []byte(j.cfg.JWTSecret), nil
 	})
 
 	if err != nil {

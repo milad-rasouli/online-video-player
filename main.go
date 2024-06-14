@@ -5,6 +5,7 @@ import (
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/handler"
+	"github.com/Milad75Rasouli/online-video-player/internal/jwt"
 	"github.com/Milad75Rasouli/online-video-player/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
@@ -38,6 +39,7 @@ func main() {
 		}
 		authHandler := handler.Auth{
 			Cfg: cfg,
+			JWT: jwt.NewAccessJWT(cfg),
 		}
 		videoHandler := handler.Video{
 			Cfg: cfg,
@@ -47,7 +49,8 @@ func main() {
 		}
 		chatHandler := handler.NewChat(cfg, messageStore)
 
-		homeGroup := app.Group("/")
+		app.Get("/", func(c *fiber.Ctx) error { return c.Redirect("/home", fiber.StatusTemporaryRedirect) })
+		homeGroup := app.Group("/home", authHandler.UserMiddleWare)
 		authGroup := app.Group("/auth")
 		videoGroup := app.Group("/video")
 		uploadGroup := app.Group("/upload")

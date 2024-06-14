@@ -4,20 +4,24 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAccessTokenStuff(t *testing.T) {
 	var (
-		token  string
-		err    error
-		secret = "verySecret"
+		token string
+		err   error
+		cfg   = config.Config{
+			JWTSecret:     "jsnviu!@$30jngmqr",
+			JWtExpireTime: 1,
+		}
 	)
 	user := model.User{
 		FullName: "foo bar",
 	}
-	jwt := NewAccessJWT(secret)
+	jwt := NewAccessJWT(cfg)
 
 	{
 		token, err = jwt.Create(user)
