@@ -32,6 +32,7 @@
     </div>
 
     <script type="text/javascript">
+        var name = "Hana" //TODO: Get this from user.
         function Chat () {
             var conn;
             var msg = document.getElementById("msg");
@@ -52,6 +53,7 @@
                 if (!msg.value) {
                     return false;
                 }
+                
                 conn.send(msg.value);
                 msg.value = "";
                 return false;

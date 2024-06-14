@@ -10,7 +10,9 @@ type Auth struct {
 }
 
 func (a *Auth) GetSignIn(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+	return c.Render("sign-in", fiber.Map{
+		"Title": a.Cfg.WebsiteTitle + " Sign-in", //TODO: take from .env
+	})
 }
 
 func (a Auth) POSTUpdateToken(c *fiber.Ctx) error {

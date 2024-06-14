@@ -7,12 +7,13 @@ import (
 )
 
 type Config struct {
-	Password     string
-	ProgramPort  string
-	Debug        string
-	WebsiteTitle string
-	RedisAddress string
-	RedisChatExp string
+	Password      string
+	ProgramPort   string
+	Debug         string
+	WebsiteTitle  string
+	RedisAddress  string
+	RedisChatExp  string
+	USER_PASSWORD string
 }
 
 func (c *Config) Read() error {
@@ -30,9 +31,13 @@ func (c *Config) Read() error {
 	c.WebsiteTitle = os.Getenv("WEBSITE_TITLE")
 	c.RedisAddress = os.Getenv("REDIS_ADDRESS")
 	c.RedisChatExp = os.Getenv("REDIS_CHAT_EXP")
+	c.USER_PASSWORD = os.Getenv("USER_PASSWORD")
 
 	if len(c.RedisChatExp) == 0 {
 		c.RedisChatExp = "60"
+	}
+	if len(c.USER_PASSWORD) == 0 {
+		c.USER_PASSWORD = "1234qwer"
 	}
 
 	return nil
