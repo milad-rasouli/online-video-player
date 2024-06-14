@@ -17,8 +17,9 @@ func (h *Home) GetHome(c *fiber.Ctx) error {
 	)
 	log.Println("home page user full name ", userFullName)
 	return c.Render("home", fiber.Map{
-		"Title": h.Cfg.WebsiteTitle,
-		"Name":  "Milad",
+		"Title":   h.Cfg.WebsiteTitle,
+		"Name":    userFullName,
+		"JWTTime": h.Cfg.JWtExpireTime / 6,
 	})
 }
 func (h *Home) Register(c fiber.Router) {

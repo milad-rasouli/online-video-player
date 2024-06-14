@@ -19,7 +19,7 @@ func (a *Auth) GetEntrance(c *fiber.Ctx) error {
 	{
 		accessToken := c.Cookies("_token")
 		if len(accessToken) != 0 {
-			return a.RedirectToHome(c)
+			return a.redirectToHome(c)
 		}
 	}
 	return c.Render("entrance", fiber.Map{
@@ -49,21 +49,38 @@ func (a *Auth) PostEntrance(c *fiber.Ctx) error {
 			log.Println("create JWT error", err)
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
-		a.SetTokenCookie(c, token)
+		a.setTokenCookie(c, token)
 	}
 	log.Println("token ", token)
-	return a.RedirectToHome(c)
+	return a.redirectToHome(c)
 }
 
-func (a *Auth) RedirectToHome(c *fiber.Ctx) error {
+func (a *Auth) redirectToHome(c *fiber.Ctx) error {
 	return c.Redirect("/home", fiber.StatusSeeOther)
 }
 
 func (a *Auth) POSTUpdateToken(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+
+	accessToken := c.Cookies("_token")
+	if len(accessToken) == 0 {
+		return a.removeCookiesAndRedirectToEntrance(c)
+	} else {
+		user, err := a.JWT.VerifyParse(accessToken)
+		if err != nil {
+			log.Println("failed to parse access token", err)
+			return a.removeCookiesAndRedirectToEntrance(c)
+		}
+		token, err := a.JWT.Create(user)
+		if err != nil {
+			log.Println("failed to create access token", err)
+			return a.removeCookiesAndRedirectToEntrance(c)
+		}
+		a.setTokenCookie(c, token)
+		return c.SendStatus(fiber.StatusCreated)
+	}
 }
 
-func (a *Auth) SetTokenCookie(c *fiber.Ctx, token string) {
+func (a *Auth) setTokenCookie(c *fiber.Ctx, token string) {
 	var (
 		expTime time.Time
 		path    string
@@ -95,14 +112,14 @@ func (a *Auth) UserMiddleWare(c *fiber.Ctx) error {
 		accessToken = c.Cookies("_token")
 		notUser := len(accessToken) == 0
 		if notUser == true {
-			return RemoveCookiesAndRedirectToEntrance(c)
+			return a.removeCookiesAndRedirectToEntrance(c)
 		}
 	}
 	{
 		user, err = a.JWT.VerifyParse(accessToken)
 		if err != nil {
 			log.Println("failed to parse access token", err)
-			return RemoveCookiesAndRedirectToEntrance(c)
+			return a.removeCookiesAndRedirectToEntrance(c)
 		}
 	}
 
@@ -111,7 +128,7 @@ func (a *Auth) UserMiddleWare(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-func RemoveCookiesAndRedirectToEntrance(c *fiber.Ctx) error {
+func (a *Auth) removeCookiesAndRedirectToEntrance(c *fiber.Ctx) error {
 	c.ClearCookie("_token")
 	return c.Redirect("/auth", fiber.StatusSeeOther)
 }

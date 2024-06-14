@@ -32,7 +32,45 @@
     </div>
 
     <script type="text/javascript">
-        var name = "Hana" //TODO: Get this from user.
+        var name = {{.Name}};
+        if(name !=undefined){
+            console.log("welcome home "+ name);
+        }
+
+
+        function sendAccessTokenRequest() {
+            // console.log("sent a access token request");
+            fetch('/auth/update', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 'JWT-Token':'access',
+                },
+            })
+            .then(response => {
+                if (response === null) {
+                    console.log('No response from server');
+                    return;
+                }
+                // console.log("got update response");
+                return true;
+            })
+            .catch(error => {
+                console.log('Error refreshing token:', error);
+            });
+        }
+        sendAccessTokenRequest();
+        var JWTTime = {{.JWTTime}};
+        if (JWTTime!=undefined && JWTTime>=2){
+            setInterval(sendAccessTokenRequest, JWTTime*60000);
+            console.log("JWT if case")
+        }else{
+            console.log("JWT else case")
+            setInterval(sendAccessTokenRequest, 5000);
+        }
+
+
         function Chat () {
             var conn;
             var msg = document.getElementById("msg");
@@ -61,7 +99,6 @@
         
             if (window["WebSocket"]) {
                 conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
-                console.log(conn)
                 conn.onclose = function (evt) {
                     var item = document.createElement("div");
                     item.innerHTML = "<b>Connection closed.</b>";
