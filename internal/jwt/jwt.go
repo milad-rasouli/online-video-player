@@ -28,7 +28,7 @@ func NewAccessJWT(cfg config.Config) AccessJWT {
 func (j AccessJWT) Create(jwtUser model.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"full_name": jwtUser.FullName,
-		"exp":       time.Now().Add(time.Hour * time.Duration(j.cfg.JWtExpireTime)).Unix(),
+		"exp":       time.Now().Add(time.Minute * time.Duration(j.cfg.JWtExpireTime)).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(j.cfg.JWTSecret))
