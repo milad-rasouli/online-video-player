@@ -23,6 +23,9 @@
                     </div>
                     <div class="col-4">
                         <input class="btn btn-warning" type="submit" value="Send" />
+                        <button type="button" class="btn btn-danger">
+                            <span id="unreadBadge" class="badge badge-light">0</span>
+                        </button>
                     </div>
                 </form>
                 <div id="log" class="p-2 text-light"></div>
@@ -37,6 +40,7 @@
             console.log("welcome home "+ Sender);
         }
 
+        var unreadMessages = 0;
         function sendAccessTokenRequest() {
             // console.log("sent a access token request");
             fetch('/auth/update', {
@@ -110,16 +114,14 @@
                 conn.onmessage = function (evt) {
                 // Parse the JSON data
                 var data = JSON.parse(evt.data);
-    
                 var date = new Date(data.CreatedAt);
                 var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-                
                 var formattedMessage = "<span style='color:red'>" + time + "</span> <b>" + data.Sender + "</b> Said: " + data.Body;
-                
                 var item = document.createElement("div");
                 item.innerHTML = formattedMessage;
-                
                 appendLog(item);
+                unreadMessages++;
+                document.getElementById("unreadBadge").textContent = unreadMessages;
             };
             } else {
                 var item = document.createElement("div");
@@ -128,6 +130,13 @@
             }
         };
         Chat();
+        var log = document.getElementById("log");
+        log.addEventListener("scroll", function() {
+            if (log.scrollTop + log.clientHeight >= log.scrollHeight) {
+                unreadMessages = 0;
+                document.getElementById("unreadBadge").textContent = unreadMessages;
+            }
+        });
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>
