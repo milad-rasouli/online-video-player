@@ -76,11 +76,12 @@
             var log = document.getElementById("log");
 
             function appendLog(item) {
-                var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-                log.appendChild(item);
-                if (doScroll) {
-                    log.scrollTop = log.scrollHeight - log.clientHeight;
-                }
+                // var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+                // log.appendChild(item);
+                // if (doScroll) {
+                //     log.scrollTop = log.scrollHeight - log.clientHeight;
+                // }
+                log.insertBefore(item, log.firstChild);
             }
         
             document.getElementById("form").onsubmit = function () {
@@ -107,13 +108,19 @@
                     appendLog(item);
                 };
                 conn.onmessage = function (evt) {
-                    var messages = evt.data.split('\n');
-                    for (var i = 0; i < messages.length; i++) {
-                        var item = document.createElement("div");
-                        item.innerText = messages[i];
-                        appendLog(item);
-                    }
-                };
+                // Parse the JSON data
+                var data = JSON.parse(evt.data);
+    
+                var date = new Date(data.CreatedAt);
+                var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+                
+                var formattedMessage = "<span style='color:red'>" + time + "</span> <b>" + data.Sender + "</b> Said: " + data.Body;
+                
+                var item = document.createElement("div");
+                item.innerHTML = formattedMessage;
+                
+                appendLog(item);
+            };
             } else {
                 var item = document.createElement("div");
                 item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
