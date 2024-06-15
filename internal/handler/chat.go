@@ -15,10 +15,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const (
+	RedisTimeout = 100
+)
+
 // Add more data to this type if needed
 type client struct {
 	isClosing bool
 	mu        sync.Mutex
+	unread    bool
 }
 type Chat struct {
 	clients    map[*websocket.Conn]*client // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
@@ -99,10 +104,10 @@ func (ch *Chat) GetWebsocket(c *websocket.Conn) {
 			modelMsg.Body = parsedMsg.Body
 			modelMsg.Sender = parsedMsg.Sender
 			//TODO: store in redis
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*RedisTimeout)
 			defer cancel()
 			ch.redis.Save(ctx, modelMsg)
-			
+
 			finalMsg, err := json.Marshal(modelMsg)
 			if err != nil {
 				log.Println("websocket unable to make model user")
@@ -141,6 +146,33 @@ func (ch *Chat) runHub() {
 	for {
 		select {
 		case connection := <-ch.register:
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*RedisTimeout)
+			defer cancel()
+			mMsg, err := ch.redis.GetAll(ctx)
+			if err != nil {
+				log.Println("websocket unable to dispatch old messages!")
+				msg, err := ch.ErrorMessage("Dispatch SYSTEM: " + err.Error())
+				connection.WriteMessage(websocket.TextMessage, []byte(msg))
+				if err != nil {
+					log.Println("websocket json marshal error message", string(err.Error()))
+				}
+				connection.Close()
+				ch.unregister <- connection
+				continue
+			}
+			msg, err := json.Marshal(mMsg)
+			if err != nil {
+				log.Println("websocket unable marshal and dispatch old messages!")
+				msg, err := ch.ErrorMessage("Marshal Dispatch SYSTEM: " + err.Error())
+				connection.WriteMessage(websocket.TextMessage, []byte(msg))
+				if err != nil {
+					log.Println("websocket json marshal error message", string(err.Error()))
+				}
+				connection.Close()
+				ch.unregister <- connection
+				continue
+			}
+			connection.WriteMessage(websocket.TextMessage, []byte(msg))
 			ch.clients[connection] = &client{}
 			log.Println("connection registered")
 
