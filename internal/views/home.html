@@ -19,10 +19,13 @@
             <div class="col-8 p-0">
                 <form id="form" class="row">
                     <div class="col-8">
-                        <input placeholder="Leave a Message Here" class="form-control bg-info text-light" type="text" id="msg" autofocus autocomplete="off" />
+                        <input minlength="1" maxlength="500" placeholder="Leave a Message Here" class="form-control bg-info text-light" type="text" id="msg" autofocus autocomplete="off" />
                     </div>
                     <div class="col-4">
                         <input class="btn btn-warning" type="submit" value="Send" />
+                        <button type="button" class="btn btn-danger">
+                            <span id="unreadBadge" class="badge badge-light">0</span>
+                        </button>
                     </div>
                 </form>
                 <div id="log" class="p-2 text-light"></div>
@@ -32,12 +35,12 @@
     </div>
 
     <script type="text/javascript">
-        var name = {{.Name}};
+        var Sender = {{.Name}};
         if(name !=undefined){
-            console.log("welcome home "+ name);
+            console.log("welcome home "+ Sender);
         }
 
-
+        var unreadMessages = 0;
         function sendAccessTokenRequest() {
             // console.log("sent a access token request");
             fetch('/auth/update', {
@@ -64,26 +67,23 @@
         var JWTTime = {{.JWTTime}};
         if (JWTTime!=undefined && JWTTime>=2){
             setInterval(sendAccessTokenRequest, JWTTime*60000);
-            console.log("JWT if case")
         }else{
-            console.log("JWT else case")
             setInterval(sendAccessTokenRequest, 5000);
         }
 
+        var msg = document.getElementById("msg");
+            var log = document.getElementById("log");
 
+            function appendLog(item) {
+                // var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+                // log.appendChild(item);
+                // if (doScroll) {
+                //     log.scrollTop = log.scrollHeight - log.clientHeight;
+                // }
+                log.insertBefore(item, log.firstChild);
+            }
         function Chat () {
             var conn;
-            var msg = document.getElementById("msg");
-            var log = document.getElementById("log");
-        
-            function appendLog(item) {
-                var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-                log.appendChild(item);
-                if (doScroll) {
-                    log.scrollTop = log.scrollHeight - log.clientHeight;
-                }
-            }
-        
             document.getElementById("form").onsubmit = function () {
                 if (!conn) {
                     return false;
@@ -91,8 +91,11 @@
                 if (!msg.value) {
                     return false;
                 }
-                
-                conn.send(msg.value);
+                let request = {
+                    "sender": Sender,
+                    "body": msg.value,
+                };
+                conn.send(JSON.stringify(request));
                 msg.value = "";
                 return false;
             };
@@ -105,11 +108,13 @@
                     appendLog(item);
                 };
                 conn.onmessage = function (evt) {
-                    var messages = evt.data.split('\n');
-                    for (var i = 0; i < messages.length; i++) {
-                        var item = document.createElement("div");
-                        item.innerText = messages[i];
-                        appendLog(item);
+                    var data = JSON.parse(evt.data);
+                    if (Array.isArray(data)) {
+                        for (var i = 0; i < data.length; i++) {
+                            appendMessage(data[i]);
+                        }
+                    } else {
+                        appendMessage(data);
                     }
                 };
             } else {
@@ -119,6 +124,27 @@
             }
         };
         Chat();
+        var log = document.getElementById("log");
+        log.addEventListener("scroll", function() {
+            if (log.scrollTop + log.clientHeight >= log.scrollHeight) {
+                unreadMessages = 0;
+                document.getElementById("unreadBadge").textContent = unreadMessages;
+            }
+        });
+
+        function appendMessage(data) {
+            if (data ==null){
+                return;
+            }
+            var date = new Date(data.CreatedAt);
+            var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+            var formattedMessage = "<span class='text-danger'>" + time + "</span>&nbsp;<b>" + data.Sender + "</b>:&nbsp;"+ data.Body ;
+            var item = document.createElement("div");
+            item.innerHTML = formattedMessage;
+            appendLog(item);
+            unreadMessages++;
+            document.getElementById("unreadBadge").textContent = unreadMessages;
+        }
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>

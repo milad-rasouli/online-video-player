@@ -54,7 +54,7 @@ func main() {
 		authGroup := app.Group("/auth")
 		videoGroup := app.Group("/video")
 		uploadGroup := app.Group("/upload")
-		ChatGroup := app.Group("/chat")
+		ChatGroup := app.Group("/chat", authHandler.UserMiddleWare)
 
 		homeHandler.Register(homeGroup)
 		authHandler.Register(authGroup)
