@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], %s) redis.call('LPUSH', 'messages', KEYS[1]) return 0"
+	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], %s) redis.call('RPUSH', 'messages', KEYS[1]) return 0"
 	GetChatMessageScript  = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
 	MAX_LENGTH_OF_MESSAGE = 6
 )

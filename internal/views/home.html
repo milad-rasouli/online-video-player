@@ -67,16 +67,11 @@
         var JWTTime = {{.JWTTime}};
         if (JWTTime!=undefined && JWTTime>=2){
             setInterval(sendAccessTokenRequest, JWTTime*60000);
-            console.log("JWT if case")
         }else{
-            console.log("JWT else case")
             setInterval(sendAccessTokenRequest, 5000);
         }
 
-
-        function Chat () {
-            var conn;
-            var msg = document.getElementById("msg");
+        var msg = document.getElementById("msg");
             var log = document.getElementById("log");
 
             function appendLog(item) {
@@ -87,7 +82,8 @@
                 // }
                 log.insertBefore(item, log.firstChild);
             }
-        
+        function Chat () {
+            var conn;
             document.getElementById("form").onsubmit = function () {
                 if (!conn) {
                     return false;
@@ -112,17 +108,15 @@
                     appendLog(item);
                 };
                 conn.onmessage = function (evt) {
-                // Parse the JSON data
-                var data = JSON.parse(evt.data);
-                var date = new Date(data.CreatedAt);
-                var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-                var formattedMessage = "<span style='color:red'>" + time + "</span> <b>" + data.Sender + "</b> Said: " + data.Body;
-                var item = document.createElement("div");
-                item.innerHTML = formattedMessage;
-                appendLog(item);
-                unreadMessages++;
-                document.getElementById("unreadBadge").textContent = unreadMessages;
-            };
+                    var data = JSON.parse(evt.data);
+                    if (Array.isArray(data)) {
+                        for (var i = 0; i < data.length; i++) {
+                            appendMessage(data[i]);
+                        }
+                    } else {
+                        appendMessage(data);
+                    }
+                };
             } else {
                 var item = document.createElement("div");
                 item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
@@ -137,6 +131,20 @@
                 document.getElementById("unreadBadge").textContent = unreadMessages;
             }
         });
+
+        function appendMessage(data) {
+            if (data ==null){
+                return;
+            }
+            var date = new Date(data.CreatedAt);
+            var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+            var formattedMessage = "<span class='text-danger'>" + time + "</span>&nbsp;<b>" + data.Sender + "</b>:&nbsp;"+ data.Body ;
+            var item = document.createElement("div");
+            item.innerHTML = formattedMessage;
+            appendLog(item);
+            unreadMessages++;
+            document.getElementById("unreadBadge").textContent = unreadMessages;
+        }
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>

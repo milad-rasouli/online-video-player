@@ -26,7 +26,7 @@ type client struct {
 	unread    bool
 }
 type Chat struct {
-	clients    map[*websocket.Conn]*client // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
+	clients    map[*websocket.Conn]*client 
 	register   chan *websocket.Conn
 	broadcast  chan string
 	unregister chan *websocket.Conn
@@ -35,7 +35,7 @@ type Chat struct {
 }
 
 func NewChat(cfg config.Config, redis store.MessageStore) *Chat {
-	var clients = make(map[*websocket.Conn]*client) // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
+	var clients = make(map[*websocket.Conn]*client) 
 	var register = make(chan *websocket.Conn)
 	var broadcast = make(chan string)
 	var unregister = make(chan *websocket.Conn)
@@ -51,27 +51,21 @@ func NewChat(cfg config.Config, redis store.MessageStore) *Chat {
 }
 
 func (ch *Chat) GetWebsocket(c *websocket.Conn) {
-	// When the function returns, unregister the client and close the connection
 	defer func() {
 		ch.unregister <- c
 		c.Close()
 	}()
-
-	// Register the client
 	ch.register <- c
-
 	for {
 		messageType, message, err := c.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Println("read error:", err)
 			}
-
-			return // Calls the deferred function, i.e. closes the connection on error
+			return
 		}
 
 		if messageType == websocket.TextMessage {
-			// Broadcast the received message
 			var (
 				parsedMsg request.Message
 				modelMsg  = model.Message{
@@ -103,11 +97,9 @@ func (ch *Chat) GetWebsocket(c *websocket.Conn) {
 
 			modelMsg.Body = parsedMsg.Body
 			modelMsg.Sender = parsedMsg.Sender
-			//TODO: store in redis
 			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*RedisTimeout)
 			defer cancel()
 			ch.redis.Save(ctx, modelMsg)
-
 			finalMsg, err := json.Marshal(modelMsg)
 			if err != nil {
 				log.Println("websocket unable to make model user")
@@ -141,7 +133,7 @@ func (ch *Chat) ChatWebsocketAcceptorMiddleware(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusUpgradeRequired)
 }
 
-// this should be shutdown properly. in the case i mean
+// TODO: this should be shutdown properly. in the case i mean
 func (ch *Chat) runHub() {
 	for {
 		select {
@@ -174,13 +166,10 @@ func (ch *Chat) runHub() {
 			}
 			connection.WriteMessage(websocket.TextMessage, []byte(msg))
 			ch.clients[connection] = &client{}
-			log.Println("connection registered")
 
 		case message := <-ch.broadcast:
-			log.Println("message received:", message)
-			// Send the message to all clients
 			for connection, c := range ch.clients {
-				go func(connection *websocket.Conn, c *client) { // send to each client in parallel so we don't block on a slow client
+				go func(connection *websocket.Conn, c *client) {
 					c.mu.Lock()
 					defer c.mu.Unlock()
 					if c.isClosing {
@@ -197,19 +186,12 @@ func (ch *Chat) runHub() {
 			}
 
 		case connection := <-ch.unregister:
-			// Remove the client from the hub
 			delete(ch.clients, connection)
-			log.Println("connection unregistered")
 		}
 	}
 }
 
-func GetChatPage(c *fiber.Ctx) error {
-	return c.Render("chat", fiber.Map{})
-}
 func (u *Chat) Register(c fiber.Router) {
 	c.Get("/ws", u.ChatWebsocketAcceptorMiddleware, websocket.New(u.GetWebsocket))
-	c.Get("/page", GetChatPage)
 	go u.runHub()
-
 }
