@@ -47,22 +47,17 @@ func main() {
 		videoHandler := handler.Video{
 			Cfg: cfg,
 		}
-		uploadHandler := handler.Upload{
-			Cfg: cfg,
-		}
 		chatHandler := handler.NewChat(cfg, messageStore)
 
 		app.Get("/", func(c *fiber.Ctx) error { return c.Redirect("/home", fiber.StatusTemporaryRedirect) })
 		homeGroup := app.Group("/home", authHandler.UserMiddleWare)
 		authGroup := app.Group("/auth")
 		videoGroup := app.Group("/video")
-		uploadGroup := app.Group("/upload")
 		ChatGroup := app.Group("/chat", authHandler.UserMiddleWare)
 
 		homeHandler.Register(homeGroup)
 		authHandler.Register(authGroup)
 		videoHandler.Register(videoGroup)
-		uploadHandler.Register(uploadGroup)
 		chatHandler.Register(ChatGroup)
 	}
 
