@@ -21,6 +21,9 @@ func main() {
 	log.Printf("%+v\n", cfg)
 
 	messageStore, disposeRedis, err := store.NewRedisMessageStore(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer disposeRedis()
 	engine := html.New("internal/views/", ".html")
 

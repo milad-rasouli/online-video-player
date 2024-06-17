@@ -42,13 +42,11 @@
 
         var unreadMessages = 0;
         function sendAccessTokenRequest() {
-            // console.log("sent a access token request");
             fetch('/auth/update', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'JWT-Token':'access',
                 },
             })
             .then(response => {
@@ -56,7 +54,6 @@
                     console.log('No response from server');
                     return;
                 }
-                // console.log("got update response");
                 return true;
             })
             .catch(error => {
@@ -73,13 +70,7 @@
 
         var msg = document.getElementById("msg");
             var log = document.getElementById("log");
-
             function appendLog(item) {
-                // var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-                // log.appendChild(item);
-                // if (doScroll) {
-                //     log.scrollTop = log.scrollHeight - log.clientHeight;
-                // }
                 log.insertBefore(item, log.firstChild);
             }
         function Chat () {
@@ -138,7 +129,7 @@
             }
             var date = new Date(data.CreatedAt);
             var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-            var formattedMessage = "<span class='text-danger'>" + time + "</span>&nbsp;<b>" + data.Sender + "</b>:&nbsp;"+ data.Body ;
+            var formattedMessage = "<span class='text-secondary'>" + time + "</span>&nbsp;<b>" + data.Sender.charAt(0).toUpperCase() + data.Sender.slice(1) + "</b>:&nbsp;<span class='text-danger'>"+ data.Body+"</span>" ;
             var item = document.createElement("div");
             item.innerHTML = formattedMessage;
             appendLog(item);
