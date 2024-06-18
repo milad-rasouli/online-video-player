@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -140,14 +139,14 @@ func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore
 		}, nil
 }
 
-func (r *RedisVideoControllerStore) CurrentVideoID() string {
-	return "CurrentVideoController"
+func (r *RedisVideoControllerStore) currentVideoID() string {
+	return "currentVideoController"
 }
 func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
 	return r.client.Do(ctx, r.client.
 		B().
 		Hset().
-		Key(r.CurrentVideoID()).
+		Key(r.currentVideoID()).
 		FieldValue().
 		FieldValue("pause", strconv.FormatBool(vc.Pause)).
 		FieldValue("timeline", vc.Timeline).
@@ -155,14 +154,41 @@ func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc mod
 		Build()).Error()
 
 }
-func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
-	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.CurrentVideoID()).Build()).AsStrSlice()
+func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context) (model.VideoControllers, error) {
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.currentVideoID()).Build()).AsStrMap()
 	if err != nil {
-		return err
+		return model.VideoControllers{}, err
 	}
-	log.Println(data)
-	// r.client.Do(ctx, r.client.B().Hgetall().Key(r.CurrentVideoID()).Build()).AsStrMap()
-	return nil
+
+	pause, err := strconv.ParseBool(data["pause"])
+	if err != nil {
+		return model.VideoControllers{}, err
+	}
+	return model.VideoControllers{
+		Timeline: data["timeline"],
+		Movie:    data["movie"],
+		Pause:    pause,
+	}, nil
+}
+
+func (r *RedisVideoControllerStore) playlistID() string {
+	return "playlist"
+}
+func (r *RedisVideoControllerStore) SaveToPlaylist(ctx context.Context, p model.Playlist) error {
+	return r.client.Do(ctx, r.client.B().Lpush().Key(r.playlistID()).Element(p.Item).Build()).Error()
+}
+func (r *RedisVideoControllerStore) GetPlaylist(ctx context.Context) ([]model.Playlist, error) {
+	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.playlistID()).Start(0).Stop(-1).Build()).AsStrSlice()
+	if err != nil {
+		return []model.Playlist{}, err
+	}
+
+	fmt.Printf("%+v\n", data)
+	playlist := []model.Playlist{}
+	for _, item := range data {
+		playlist = append(playlist, model.Playlist{Item: item})
+	}
+	return playlist, nil
 }
 
 /*

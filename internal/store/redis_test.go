@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -73,5 +74,25 @@ func TestVideoController(t *testing.T) {
 	{
 		err := redis.SaveCurrentVideo(ctx, m)
 		assert.NoError(t, err)
+	}
+
+	{
+		data, err := redis.GetCurrentVideo(ctx)
+		assert.NoError(t, err)
+		log.Printf("%+v\v", data)
+		//TODO: equal
+	}
+
+	p := model.Playlist{
+		Item: "foo foo",
+	}
+	{
+		err := redis.SaveToPlaylist(ctx, p)
+		assert.NoError(t, err)
+	}
+	{
+		p, err := redis.GetPlaylist(ctx)
+		assert.NoError(t, err)
+		log.Printf("test: %+v\n", p)
 	}
 }
