@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
@@ -25,8 +24,6 @@ type RedisMessageStore struct {
 	client       rueidis.Client
 	saveScript   *rueidis.Lua
 	getAllScript *rueidis.Lua
-	// messageID    uint64
-	mu sync.RWMutex
 }
 type DisposeFunc func()
 
@@ -121,4 +118,28 @@ func parseJSON(jsonStr string) (ValueType, error) {
 	var blobString ValueType
 	err := json.Unmarshal([]byte(jsonStr), &blobString)
 	return blobString, err
+}
+
+type RedisVideoControllerStore struct {
+	cfg    config.Config
+	client rueidis.Client
+}
+
+func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore, DisposeFunc, error) {
+	redisClient, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{cfg.RedisAddress}})
+	if err != nil {
+		return &RedisVideoControllerStore{}, nil, err
+	}
+
+	return &RedisVideoControllerStore{
+			cfg:    cfg,
+			client: redisClient,
+		}, func() {
+			redisClient.Close()
+		}, nil
+}
+
+func (r *RedisVideoControllerStore) Save(ctx context.Context, vc model.VideoControllers) error {
+
+	return nil
 }
