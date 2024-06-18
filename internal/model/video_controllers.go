@@ -5,3 +5,7 @@ type VideoControllers struct {
 	Timeline string
 	Movie    string
 }
+
+type Playlist struct {
+	Item string
+}

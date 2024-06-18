@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -139,7 +140,37 @@ func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore
 		}, nil
 }
 
-func (r *RedisVideoControllerStore) Save(ctx context.Context, vc model.VideoControllers) error {
+func (r *RedisVideoControllerStore) CurrentVideoID() string {
+	return "CurrentVideoController"
+}
+func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
+	return r.client.Do(ctx, r.client.
+		B().
+		Hset().
+		Key(r.CurrentVideoID()).
+		FieldValue().
+		FieldValue("pause", strconv.FormatBool(vc.Pause)).
+		FieldValue("timeline", vc.Timeline).
+		FieldValue("movie", vc.Movie).
+		Build()).Error()
 
+}
+func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.CurrentVideoID()).Build()).AsStrSlice()
+	if err != nil {
+		return err
+	}
+	log.Println(data)
+	// r.client.Do(ctx, r.client.B().Hgetall().Key(r.CurrentVideoID()).Build()).AsStrMap()
 	return nil
 }
+
+/*
+type VideoControllersStore interface {
+	SaveCurrentVideo(context.Context, model.VideoControllers) error
+	GetCurrentVideo(context.Context) (model.VideoControllers, error)
+	SaveToPlaylist(context.Context, model.Playlist) error
+	GetPlaylist(context.Context) ([]model.Playlist, error)
+	RemovePlaylist(context.Context) error
+}
+*/

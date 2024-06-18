@@ -12,6 +12,9 @@ type MessageStore interface {
 }
 
 type VideoControllersStore interface {
-	Save(context.Context, model.VideoControllers) error
-	Get(context.Context) (model.VideoControllers, error)
+	SaveCurrentVideo(context.Context, model.VideoControllers) error
+	GetCurrentVideo(context.Context) (model.VideoControllers, error)
+	SaveToPlaylist(context.Context, model.Playlist) error
+	GetPlaylist(context.Context) ([]model.Playlist, error)
+	RemovePlaylist(context.Context) error
 }

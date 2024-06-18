@@ -54,3 +54,24 @@ func TestRedis(t *testing.T) {
 
 	}
 }
+
+func TestVideoController(t *testing.T) {
+	cfg := config.Config{
+		RedisAddress: "127.0.0.1:6379",
+	}
+	redis, disposeRedis, err := NewRedisVideoControllerStore(cfg)
+	assert.NoError(t, err)
+	defer disposeRedis()
+
+	m := model.VideoControllers{
+		Pause:    false,
+		Timeline: "12:12",
+		Movie:    "foo bar baz",
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
+	{
+		err := redis.SaveCurrentVideo(ctx, m)
+		assert.NoError(t, err)
+	}
+}
