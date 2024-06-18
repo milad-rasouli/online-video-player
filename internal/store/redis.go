@@ -175,7 +175,7 @@ func (r *RedisVideoControllerStore) playlistID() string {
 	return "playlist"
 }
 func (r *RedisVideoControllerStore) SaveToPlaylist(ctx context.Context, p model.Playlist) error {
-	return r.client.Do(ctx, r.client.B().Lpush().Key(r.playlistID()).Element(p.Item).Build()).Error()
+	return r.client.Do(ctx, r.client.B().Rpush().Key(r.playlistID()).Element(p.Item).Build()).Error()
 }
 func (r *RedisVideoControllerStore) GetPlaylist(ctx context.Context) ([]model.Playlist, error) {
 	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.playlistID()).Start(0).Stop(-1).Build()).AsStrSlice()
@@ -191,12 +191,6 @@ func (r *RedisVideoControllerStore) GetPlaylist(ctx context.Context) ([]model.Pl
 	return playlist, nil
 }
 
-/*
-type VideoControllersStore interface {
-	SaveCurrentVideo(context.Context, model.VideoControllers) error
-	GetCurrentVideo(context.Context) (model.VideoControllers, error)
-	SaveToPlaylist(context.Context, model.Playlist) error
-	GetPlaylist(context.Context) ([]model.Playlist, error)
-	RemovePlaylist(context.Context) error
+func (r *RedisVideoControllerStore) RemovePlaylist(ctx context.Context) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.playlistID()).Build()).Error()
 }
-*/

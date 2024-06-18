@@ -79,20 +79,30 @@ func TestVideoController(t *testing.T) {
 	{
 		data, err := redis.GetCurrentVideo(ctx)
 		assert.NoError(t, err)
-		log.Printf("%+v\v", data)
-		//TODO: equal
+		assert.Equal(t, m, data)
+		log.Printf("%+v\n", data)
 	}
 
-	p := model.Playlist{
-		Item: "foo foo",
+	p := []model.Playlist{
+		{Item: "foo foo"},
+		{Item: "bar bar"},
+		{Item: "baz baz"},
 	}
 	{
-		err := redis.SaveToPlaylist(ctx, p)
+		err := redis.RemovePlaylist(ctx)
 		assert.NoError(t, err)
 	}
 	{
-		p, err := redis.GetPlaylist(ctx)
+		for _, i := range p {
+			err := redis.SaveToPlaylist(ctx, i)
+			assert.NoError(t, err)
+		}
+	}
+
+	{
+		fp, err := redis.GetPlaylist(ctx)
 		assert.NoError(t, err)
-		log.Printf("test: %+v\n", p)
+		assert.Equal(t, p, fp)
+		log.Printf("test: %+v\n", fp)
 	}
 }
