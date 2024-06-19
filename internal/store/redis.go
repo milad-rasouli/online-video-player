@@ -142,8 +142,11 @@ func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore
 func (r *RedisVideoControllerStore) userListID() string {
 	return "userList"
 }
-func (r *RedisVideoControllerStore) AddUser(ctx context.Context, user model.User) error {
+func (r *RedisVideoControllerStore) SaveUser(ctx context.Context, user model.User) error {
 	return r.client.Do(ctx, r.client.B().Rpush().Key(r.userListID()).Element(user.FullName).Build()).Error()
+}
+func (r *RedisVideoControllerStore) RemoveAllUser(ctx context.Context) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.userListID()).Build()).Error()
 }
 func (r *RedisVideoControllerStore) GetAllUser(ctx context.Context) ([]model.User, error) {
 	var users []model.User

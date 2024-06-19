@@ -64,23 +64,43 @@ func TestVideoController(t *testing.T) {
 	assert.NoError(t, err)
 	defer disposeRedis()
 
-	m := model.VideoControllers{
-		Pause:    false,
+	vc := model.VideoControllers{
+		Pause:    true,
 		Timeline: "12:12",
 		Movie:    "foo bar baz",
+	}
+
+	users := []model.User{
+		{FullName: "foo"},
+		{FullName: "bar"},
+		{FullName: "baz"},
+		{FullName: "boo"},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
 	{
-		err := redis.SaveCurrentVideo(ctx, m)
-		assert.NoError(t, err)
-	}
+		for _, user := range users {
+			err = redis.SaveUser(ctx, user)
+			assert.NoError(t, err)
+		}
 
-	{
-		data, err := redis.GetCurrentVideo(ctx)
+		err = redis.SaveCurrentVideo(ctx, vc)
 		assert.NoError(t, err)
-		assert.Equal(t, m, data)
-		log.Printf("%+v\n", data)
+
+		for _, user := range users {
+			temp, err := redis.GetCurrentVideo(ctx, user)
+			assert.NoError(t, err)
+			assert.Equal(t, temp, vc)
+			fmt.Printf("user video: %+v - %+v\n", user, temp)
+		}
+
+		fetchedUsers, err := redis.GetAllUser(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, users, fetchedUsers)
+		fmt.Printf("fetchedUsers: %+v\n", fetchedUsers)
+
+		err = redis.RemoveAllUser(ctx)
+		assert.NoError(t, err)
 	}
 
 	p := []model.Playlist{
