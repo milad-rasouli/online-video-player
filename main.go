@@ -58,7 +58,7 @@ func main() {
 		app.Get("/", func(c *fiber.Ctx) error { return c.Redirect("/home", fiber.StatusTemporaryRedirect) })
 		homeGroup := app.Group("/home", authHandler.UserMiddleWare)
 		authGroup := app.Group("/auth")
-		videoGroup := app.Group("/video")
+		videoGroup := app.Group("/video", authHandler.UserMiddleWare)
 		ChatGroup := app.Group("/chat", authHandler.UserMiddleWare)
 
 		homeHandler.Register(homeGroup)

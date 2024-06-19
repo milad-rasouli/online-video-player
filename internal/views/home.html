@@ -11,8 +11,12 @@
     <div class="container">
         <div class="row">
             <div class="col-12 p-0">
-                <video id="videoPlayer" class="w-100" height="450px" src="/static/video/1.mp4" controls>
+                <video id="videoPlayer" class="w-100" height="450px" src="/video" controls>
                 </video>
+                <div class="d-flex justify-content-center mt-2">
+                    <button id="skipBackward" class="btn btn-primary mr-2">Skip Backward 10s</button>
+                    <button id="skipForward" class="btn btn-primary">Skip Forward 10s</button>
+                </div>
             </div>
         </div>
         <div class="row border-top pt-2">
@@ -129,6 +133,8 @@
             unreadMessages++;
             document.getElementById("unreadBadge").textContent = unreadMessages;
         }
+
+
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>
