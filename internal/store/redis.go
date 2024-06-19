@@ -139,23 +139,69 @@ func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore
 		}, nil
 }
 
-func (r *RedisVideoControllerStore) currentVideoID() string {
-	return "currentVideoController"
+func (r *RedisVideoControllerStore) userListID() string {
+	return "userList"
+}
+func (r *RedisVideoControllerStore) AddUser(ctx context.Context, user model.User) error {
+	return r.client.Do(ctx, r.client.B().Rpush().Key(r.userListID()).Element(user.FullName).Build()).Error()
+}
+func (r *RedisVideoControllerStore) GetAllUser(ctx context.Context) ([]model.User, error) {
+	var users []model.User
+	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.userListID()).Start(0).Stop(-1).Build()).AsStrSlice()
+	if err != nil {
+		return []model.User{}, err
+	}
+	for _, i := range data {
+		users = append(users, model.User{FullName: i})
+	}
+	return users, nil
+}
+
+func (r *RedisVideoControllerStore) currentVideoID(user model.User) string {
+	return "currentVideoController:" + user.FullName
 }
 func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
-	return r.client.Do(ctx, r.client.
-		B().
-		Hset().
-		Key(r.currentVideoID()).
-		FieldValue().
-		FieldValue("pause", strconv.FormatBool(vc.Pause)).
-		FieldValue("timeline", vc.Timeline).
-		FieldValue("movie", vc.Movie).
-		Build()).Error()
-
+	var (
+		users []model.User
+		err   error
+	)
+	{
+		users, err = r.GetAllUser(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	{
+		usersSize := len(users)
+		cmds := make(rueidis.Commands, 0, usersSize)
+		for _, user := range users {
+			key := r.currentVideoID(user)
+			cmds = append(cmds, r.client.
+				B().
+				Hset().
+				Key(key).
+				FieldValue().
+				FieldValue("pause", strconv.FormatBool(vc.Pause)).
+				FieldValue("timeline", vc.Timeline).
+				FieldValue("movie", vc.Movie).
+				Build())
+			cmds = append(cmds, r.client.
+				B().
+				Expire().
+				Key(key).
+				Seconds(5).
+				Build())
+		}
+		for _, resp := range r.client.DoMulti(ctx, cmds...) {
+			if err := resp.Error(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
-func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context) (model.VideoControllers, error) {
-	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.currentVideoID()).Build()).AsStrMap()
+func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context, user model.User) (model.VideoControllers, error) {
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.currentVideoID(user)).Build()).AsStrMap()
 	if err != nil {
 		return model.VideoControllers{}, err
 	}
@@ -169,6 +215,9 @@ func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context) (model.
 		Movie:    data["movie"],
 		Pause:    pause,
 	}, nil
+}
+func (r *RedisVideoControllerStore) RemoveCurrentVideo(ctx context.Context, user model.User) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.currentVideoID(user)).Build()).Error()
 }
 
 func (r *RedisVideoControllerStore) playlistID() string {
