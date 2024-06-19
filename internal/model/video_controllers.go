@@ -1,9 +1,9 @@
 package model
 
 type VideoControllers struct {
-	Pause    bool
-	Timeline string
-	Movie    string
+	Pause    bool   `json:"pause"`
+	Timeline string `json:"timeline"`
+	Movie    string `json:"movie"`
 }
 
 type Playlist struct {

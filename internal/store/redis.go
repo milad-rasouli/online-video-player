@@ -120,35 +120,33 @@ func parseJSON(jsonStr string) (ValueType, error) {
 	return blobString, err
 }
 
-type RedisVideoControllerStore struct {
+type RedisUserAndVideStore struct {
 	cfg    config.Config
 	client rueidis.Client
 }
-
-func NewRedisVideoControllerStore(cfg config.Config) (*RedisVideoControllerStore, DisposeFunc, error) {
+func NewRedisUserAndVideStore(cfg config.Config) (*RedisUserAndVideStore, DisposeFunc, error) {
 	redisClient, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{cfg.RedisAddress}})
 	if err != nil {
-		return &RedisVideoControllerStore{}, nil, err
+		return &RedisUserAndVideStore{}, nil, err
 	}
 
-	return &RedisVideoControllerStore{
+	return &RedisUserAndVideStore{
 			cfg:    cfg,
 			client: redisClient,
 		}, func() {
 			redisClient.Close()
 		}, nil
 }
-
-func (r *RedisVideoControllerStore) userListID() string {
+func (r *RedisUserAndVideStore) userListID() string {
 	return "userList"
 }
-func (r *RedisVideoControllerStore) SaveUser(ctx context.Context, user model.User) error {
+func (r *RedisUserAndVideStore) SaveUser(ctx context.Context, user model.User) error {
 	return r.client.Do(ctx, r.client.B().Rpush().Key(r.userListID()).Element(user.FullName).Build()).Error()
 }
-func (r *RedisVideoControllerStore) RemoveAllUser(ctx context.Context) error {
+func (r *RedisUserAndVideStore) RemoveAllUser(ctx context.Context) error {
 	return r.client.Do(ctx, r.client.B().Del().Key(r.userListID()).Build()).Error()
 }
-func (r *RedisVideoControllerStore) GetAllUser(ctx context.Context) ([]model.User, error) {
+func (r *RedisUserAndVideStore) GetAllUser(ctx context.Context) ([]model.User, error) {
 	var users []model.User
 	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.userListID()).Start(0).Stop(-1).Build()).AsStrSlice()
 	if err != nil {
@@ -159,11 +157,10 @@ func (r *RedisVideoControllerStore) GetAllUser(ctx context.Context) ([]model.Use
 	}
 	return users, nil
 }
-
-func (r *RedisVideoControllerStore) currentVideoID(user model.User) string {
+func (r *RedisUserAndVideStore) currentVideoID(user model.User) string {
 	return "currentVideoController:" + user.FullName
 }
-func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
+func (r *RedisUserAndVideStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
 	var (
 		users []model.User
 		err   error
@@ -203,7 +200,7 @@ func (r *RedisVideoControllerStore) SaveCurrentVideo(ctx context.Context, vc mod
 	}
 	return nil
 }
-func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context, user model.User) (model.VideoControllers, error) {
+func (r *RedisUserAndVideStore) GetCurrentVideo(ctx context.Context, user model.User) (model.VideoControllers, error) {
 	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.currentVideoID(user)).Build()).AsStrMap()
 	if err != nil {
 		return model.VideoControllers{}, err
@@ -219,17 +216,17 @@ func (r *RedisVideoControllerStore) GetCurrentVideo(ctx context.Context, user mo
 		Pause:    pause,
 	}, nil
 }
-func (r *RedisVideoControllerStore) RemoveCurrentVideo(ctx context.Context, user model.User) error {
+func (r *RedisUserAndVideStore) RemoveCurrentVideo(ctx context.Context, user model.User) error {
 	return r.client.Do(ctx, r.client.B().Del().Key(r.currentVideoID(user)).Build()).Error()
 }
 
-func (r *RedisVideoControllerStore) playlistID() string {
+func (r *RedisUserAndVideStore) playlistID() string {
 	return "playlist"
 }
-func (r *RedisVideoControllerStore) SaveToPlaylist(ctx context.Context, p model.Playlist) error {
+func (r *RedisUserAndVideStore) SaveToPlaylist(ctx context.Context, p model.Playlist) error {
 	return r.client.Do(ctx, r.client.B().Rpush().Key(r.playlistID()).Element(p.Item).Build()).Error()
 }
-func (r *RedisVideoControllerStore) GetPlaylist(ctx context.Context) ([]model.Playlist, error) {
+func (r *RedisUserAndVideStore) GetPlaylist(ctx context.Context) ([]model.Playlist, error) {
 	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.playlistID()).Start(0).Stop(-1).Build()).AsStrSlice()
 	if err != nil {
 		return []model.Playlist{}, err
@@ -243,6 +240,6 @@ func (r *RedisVideoControllerStore) GetPlaylist(ctx context.Context) ([]model.Pl
 	return playlist, nil
 }
 
-func (r *RedisVideoControllerStore) RemovePlaylist(ctx context.Context) error {
+func (r *RedisUserAndVideStore) RemovePlaylist(ctx context.Context) error {
 	return r.client.Do(ctx, r.client.B().Del().Key(r.playlistID()).Build()).Error()
 }

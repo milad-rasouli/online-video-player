@@ -44,8 +44,14 @@ func main() {
 			Cfg: cfg,
 			JWT: jwt.NewAccessJWT(cfg),
 		}
+		userAndVideo, cancel, err := store.NewRedisUserAndVideStore(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer cancel()
 		videoHandler := handler.Video{
-			Cfg: cfg,
+			Cfg:   cfg,
+			Store: userAndVideo,
 		}
 		chatHandler := handler.NewChat(cfg, messageStore)
 

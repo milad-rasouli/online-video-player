@@ -60,7 +60,7 @@ func TestVideoController(t *testing.T) {
 	cfg := config.Config{
 		RedisAddress: "127.0.0.1:6379",
 	}
-	redis, disposeRedis, err := NewRedisVideoControllerStore(cfg)
+	redis, disposeRedis, err := NewRedisUserAndVideStore(cfg)
 	assert.NoError(t, err)
 	defer disposeRedis()
 
@@ -127,28 +127,28 @@ func TestVideoController(t *testing.T) {
 	}
 }
 
-// func TestVideoControllerEmpty(t *testing.T) {
-// 	cfg := config.Config{ //TODO: run the redis database with dockertest
-// 		RedisAddress: "127.0.0.1:6379",
-// 	}
-// 	redis, disposeRedis, err := NewRedisVideoControllerStore(cfg)
-// 	assert.NoError(t, err)
-// 	defer disposeRedis()
+func TestVideoControllerEmpty(t *testing.T) {
+	cfg := config.Config{ //TODO: run the redis database with dockertest
+		RedisAddress: "127.0.0.1:6379",
+	}
+	redis, disposeRedis, err := NewRedisUserAndVideStore(cfg)
+	assert.NoError(t, err)
+	defer disposeRedis()
 
-// 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-// 	defer cancel()
-// 	{
-// 		data, err := redis.GetCurrentVideo(ctx)
-// 		assert.NoError(t, err)
-// 		fmt.Printf("Video %+v\n", data)
-// 	}
-// 	{
-// 		err := redis.RemovePlaylist(ctx)
-// 		assert.NoError(t, err)
-// 	}
-// 	{
-// 		data, err := redis.GetPlaylist(ctx)
-// 		assert.NoError(t, err)
-// 		fmt.Printf("Playlist %+v\n", data)
-// 	}
-// }
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	{
+		data, err := redis.GetCurrentVideo(ctx, model.User{FullName: "foo"})
+		assert.NoError(t, err)
+		fmt.Printf("Video %+v\n", data)
+	}
+	{
+		err := redis.RemovePlaylist(ctx)
+		assert.NoError(t, err)
+	}
+	{
+		data, err := redis.GetPlaylist(ctx)
+		assert.NoError(t, err)
+		fmt.Printf("Playlist %+v\n", data)
+	}
+}
