@@ -135,6 +135,59 @@
         }
 
 
+        
+    var videoPlayer = document.getElementById('videoPlayer');
+    var skipBackwardButton = document.getElementById('skipBackward');
+    var skipForwardButton = document.getElementById('skipForward');
+
+    videoPlayer.addEventListener('pause', function() {
+        sendVideoStatus(true, this.currentTime);
+    });
+
+    videoPlayer.addEventListener('play', function() {
+        sendVideoStatus(false, this.currentTime);
+    });
+
+    videoPlayer.addEventListener('seeked', function() {
+        var isPaused = this.paused;
+        sendVideoStatus(isPaused, this.currentTime);
+    });
+
+    skipBackwardButton.addEventListener('click', function() {
+        videoPlayer.currentTime -= 10;
+    });
+
+    skipForwardButton.addEventListener('click', function() {
+        videoPlayer.currentTime += 10;
+    });
+
+    function sendVideoStatus(isPaused, currentTime) {
+        var hours = Math.floor(currentTime / 3600);
+        var minutes = Math.floor((currentTime % 3600) / 60);
+        var seconds = Math.floor(currentTime % 60);
+        var timeline = hours + ":" + minutes + ":" + seconds;
+
+        // Extract the video name from the src attribute
+        var videoSrc = videoPlayer.getAttribute('src');
+        var videoName = videoSrc.substring(videoSrc.lastIndexOf('/') + 1);
+
+        fetch('/video/set', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                pause: isPaused,
+                timeline: timeline,
+                movie: videoName, 
+            }),
+        })
+        .then(response => response)
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>

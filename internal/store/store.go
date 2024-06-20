@@ -12,13 +12,6 @@ type MessageStore interface {
 }
 
 type UserAndVideoStore interface {
-	SaveUser(context.Context, model.User) error
-	RemoveAllUser(context.Context) error
-	GetAllUser(context.Context) ([]model.User, error)
-	SaveCurrentVideo(context.Context, model.VideoControllers) error
-	GetCurrentVideo(context.Context, model.User) (model.VideoControllers, error)
-	RemoveCurrentVideo(context.Context, model.User) error
-	SaveToPlaylist(context.Context, model.Playlist) error
-	GetPlaylist(context.Context) ([]model.Playlist, error)
-	RemovePlaylist(context.Context) error
+	SaveUserVideoInfo(context.Context, model.User, model.VideoControllers) error
+	GetUserVideoInfo(context.Context, model.User) (model.VideoControllers, error)
 }
