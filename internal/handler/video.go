@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -146,11 +145,11 @@ func (u *Video) uuidResponse(uuid string) map[string]string {
 }
 func (u *Video) PostUpload(c *fiber.Ctx) error {
 	{
-		up, err := u.Store.GetUploadedVideo(c.Context())
-		if (err != nil && !errors.Is(err, store.UploadedURLIsEmpty)) || (err != nil && !errors.Is(err, store.UploadedUUIDIsEmpty)) {
-			log.Printf("PostUpload store error %s\n", err)
-			return c.SendStatus(fiber.StatusInternalServerError)
-		}
+		up, _ := u.Store.GetUploadedVideo(c.Context())
+		// if (err != nil && !errors.Is(err, store.UploadedURLIsEmpty)) || (err != nil && !errors.Is(err, store.UploadedUUIDIsEmpty)) {
+		// 	log.Printf("PostUpload store error %s\n", err)
+		// 	return c.SendStatus(fiber.StatusInternalServerError)
+		// } //TODO: Handel this error part
 		if len(up.UUID) > 0 {
 			return c.JSON(u.uuidResponse(up.UUID))
 		}
@@ -163,6 +162,8 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 			log.Printf("PostUpload json parse error %s", err)
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
+
+		log.Printf("video url %s and uuid %s \n", rup.URL, rup.UUID) //TODO: Remove this line
 	}
 	{
 		u.Store.SaveUploadedVideo(c.Context(), model.UploadedVideo{

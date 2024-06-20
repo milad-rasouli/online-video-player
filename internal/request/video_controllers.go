@@ -28,8 +28,8 @@ func (v *VideoControllers) Valid() error {
 }
 
 type UploadedVideo struct {
-	URL  string
-	UUID string
+	URL  string `json:"url"`
+	UUID string `json:"uuid"`
 }
 
 func (u *UploadedVideo) Valid() error {
