@@ -49,3 +49,19 @@ SCRIPT LOAD " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_
 ```bash
 EVALSHA "ad22087b1a20fa647e991e5a566c31fdf919fbfb" 1 messages
 ```
+
+## How to online users are stored
+
+### Inserting users
+
+```bash
+SET user:name1 value EX 500
+SET user:name2 value EX 500
+SET user:name3 value EX 500
+```
+
+### Getting users
+
+```bash
+SCAN 0 MATCH user:*
+```

@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
@@ -15,9 +15,15 @@ import (
 )
 
 const (
-	AddChatMessageScript  = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], %s) redis.call('RPUSH', 'messages', KEYS[1]) return 0"
-	GetChatMessageScript  = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
-	MAX_LENGTH_OF_MESSAGE = 6
+	AddChatMessageScript     = "redis.call('HSET', KEYS[1], 'user_id', ARGV[1], 'message_text', ARGV[2], 'timestamp', ARGV[3]) redis.call('EXPIRE', KEYS[1], %s) redis.call('RPUSH', 'messages', KEYS[1]) return 0"
+	GetChatMessageScript     = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
+	MAX_LENGTH_OF_MESSAGE    = 6
+	ExpireUserVideoInfoAfter = 120
+)
+
+var (
+	TimelineIsEmpty = errors.New("Timeline is empty")
+	PauseIsEmpty    = errors.New("Pause is empty")
 )
 
 type RedisMessageStore struct {
@@ -25,8 +31,6 @@ type RedisMessageStore struct {
 	client       rueidis.Client
 	saveScript   *rueidis.Lua
 	getAllScript *rueidis.Lua
-	// messageID    uint64
-	mu sync.RWMutex
 }
 type DisposeFunc func()
 
@@ -122,3 +126,182 @@ func parseJSON(jsonStr string) (ValueType, error) {
 	err := json.Unmarshal([]byte(jsonStr), &blobString)
 	return blobString, err
 }
+
+type RedisUserAndVideStore struct {
+	cfg    config.Config
+	client rueidis.Client
+}
+
+func NewRedisUserAndVideStore(cfg config.Config) (*RedisUserAndVideStore, DisposeFunc, error) {
+	redisClient, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: []string{cfg.RedisAddress}})
+	if err != nil {
+		return &RedisUserAndVideStore{}, nil, err
+	}
+
+	return &RedisUserAndVideStore{
+			cfg:    cfg,
+			client: redisClient,
+		}, func() {
+			redisClient.Close()
+		}, nil
+}
+
+func (r *RedisUserAndVideStore) userVideoInfoID(user model.User) string {
+	return "user:" + user.FullName
+}
+
+func (r *RedisUserAndVideStore) SaveUserVideoInfo(ctx context.Context, user model.User, vc model.VideoControllers) error {
+	var (
+		err error
+		key = r.userVideoInfoID(user)
+	)
+
+	err = r.client.Do(ctx, r.client.B().
+		Hset().
+		Key(key).
+		FieldValue().
+		FieldValue("timeline", vc.Timeline).
+		FieldValue("pause", strconv.FormatBool(vc.Pause)).
+		Build()).Error()
+	if err != nil {
+		return err
+	}
+	err = r.client.Do(ctx, r.client.B().Expire().Key(key).Seconds(ExpireUserVideoInfoAfter).Build()).Error()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *RedisUserAndVideStore) GetUserVideoInfo(ctx context.Context, user model.User) (model.VideoControllers, error) {
+	var (
+		key = r.userVideoInfoID(user)
+		vc  model.VideoControllers
+	)
+
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(key).Build()).AsStrMap()
+	if err != nil {
+		return model.VideoControllers{}, err
+	}
+	timeline, ok := data["timeline"]
+	if ok {
+		vc.Timeline = timeline
+	} else {
+		return model.VideoControllers{}, TimelineIsEmpty
+	}
+	pause, ok := data["pause"]
+	if ok {
+		p, err := strconv.ParseBool(pause)
+		if err != nil {
+			return model.VideoControllers{}, err
+		}
+		vc.Pause = p
+	} else {
+		return model.VideoControllers{}, PauseIsEmpty
+	}
+	return vc, err
+}
+
+// func (r *RedisUserAndVideStore) SaveUser(ctx context.Context, user model.User) error {
+// 	return r.client.Do(ctx, r.client.B().Rpush().Key(r.userListID()).Element(user.FullName).Build()).Error()
+// }
+// func (r *RedisUserAndVideStore) RemoveAllUser(ctx context.Context) error {
+// 	return r.client.Do(ctx, r.client.B().Del().Key(r.userListID()).Build()).Error()
+// }
+// func (r *RedisUserAndVideStore) GetAllUser(ctx context.Context) ([]model.User, error) {
+// 	var users []model.User
+// 	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.userListID()).Start(0).Stop(-1).Build()).AsStrSlice()
+// 	if err != nil {
+// 		return []model.User{}, err
+// 	}
+// 	for _, i := range data {
+// 		users = append(users, model.User{FullName: i})
+// 	}
+// 	return users, nil
+// }
+// func (r *RedisUserAndVideStore) currentVideoID(user model.User) string {
+// 	return "currentVideoController:" + user.FullName
+// }
+// func (r *RedisUserAndVideStore) SaveCurrentVideo(ctx context.Context, vc model.VideoControllers) error {
+// 	var (
+// 		users []model.User
+// 		err   error
+// 	)
+// 	{
+// 		users, err = r.GetAllUser(ctx)
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+// 	{
+// 		usersSize := len(users)
+// 		cmds := make(rueidis.Commands, 0, usersSize)
+// 		for _, user := range users {
+// 			key := r.currentVideoID(user)
+// 			cmds = append(cmds, r.client.
+// 				B().
+// 				Hset().
+// 				Key(key).
+// 				FieldValue().
+// 				FieldValue("pause", strconv.FormatBool(vc.Pause)).
+// 				FieldValue("timeline", vc.Timeline).
+// 				FieldValue("movie", vc.Movie).
+// 				Build())
+// 			cmds = append(cmds, r.client.
+// 				B().
+// 				Expire().
+// 				Key(key).
+// 				Seconds(5).
+// 				Build())
+// 		}
+// 		for _, resp := range r.client.DoMulti(ctx, cmds...) {
+// 			if err := resp.Error(); err != nil {
+// 				return err
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
+// func (r *RedisUserAndVideStore) GetCurrentVideo(ctx context.Context, user model.User) (model.VideoControllers, error) {
+// 	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.currentVideoID(user)).Build()).AsStrMap()
+// 	if err != nil {
+// 		return model.VideoControllers{}, err
+// 	}
+
+// 	pause, err := strconv.ParseBool(data["pause"])
+// 	if err != nil {
+// 		return model.VideoControllers{}, err
+// 	}
+// 	return model.VideoControllers{
+// 		Timeline: data["timeline"],
+// 		Movie:    data["movie"],
+// 		Pause:    pause,
+// 	}, nil
+// }
+// func (r *RedisUserAndVideStore) RemoveCurrentVideo(ctx context.Context, user model.User) error {
+// 	return r.client.Do(ctx, r.client.B().Del().Key(r.currentVideoID(user)).Build()).Error()
+// }
+
+// func (r *RedisUserAndVideStore) playlistID() string {
+// 	return "playlist"
+// }
+// func (r *RedisUserAndVideStore) SaveToPlaylist(ctx context.Context, p model.Playlist) error {
+// 	return r.client.Do(ctx, r.client.B().Rpush().Key(r.playlistID()).Element(p.Item).Build()).Error()
+// }
+// func (r *RedisUserAndVideStore) GetPlaylist(ctx context.Context) ([]model.Playlist, error) {
+// 	data, err := r.client.Do(ctx, r.client.B().Lrange().Key(r.playlistID()).Start(0).Stop(-1).Build()).AsStrSlice()
+// 	if err != nil {
+// 		return []model.Playlist{}, err
+// 	}
+
+// 	fmt.Printf("%+v\n", data)
+// 	playlist := []model.Playlist{}
+// 	for _, item := range data {
+// 		playlist = append(playlist, model.Playlist{Item: item})
+// 	}
+// 	return playlist, nil
+// }
+
+// func (r *RedisUserAndVideStore) RemovePlaylist(ctx context.Context) error {
+// 	return r.client.Do(ctx, r.client.B().Del().Key(r.playlistID()).Build()).Error()
+// }

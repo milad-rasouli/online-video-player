@@ -11,8 +11,12 @@
     <div class="container">
         <div class="row">
             <div class="col-12 p-0">
-                <video id="videoPlayer" class="w-100" height="450px" src="/static/video/1.mp4" controls>
+                <video id="videoPlayer" class="w-100" height="450px" src="/video" controls>
                 </video>
+                <div class="d-flex justify-content-center mt-2">
+                    <button id="skipBackward" class="btn btn-primary mr-2">Skip Backward 10s</button>
+                    <button id="skipForward" class="btn btn-primary">Skip Forward 10s</button>
+                </div>
             </div>
         </div>
         <div class="row border-top pt-2">
@@ -42,13 +46,11 @@
 
         var unreadMessages = 0;
         function sendAccessTokenRequest() {
-            // console.log("sent a access token request");
             fetch('/auth/update', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'JWT-Token':'access',
                 },
             })
             .then(response => {
@@ -56,7 +58,6 @@
                     console.log('No response from server');
                     return;
                 }
-                // console.log("got update response");
                 return true;
             })
             .catch(error => {
@@ -71,17 +72,12 @@
             setInterval(sendAccessTokenRequest, 5000);
         }
 
-        var msg = document.getElementById("msg");
-            var log = document.getElementById("log");
 
-            function appendLog(item) {
-                // var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-                // log.appendChild(item);
-                // if (doScroll) {
-                //     log.scrollTop = log.scrollHeight - log.clientHeight;
-                // }
-                log.insertBefore(item, log.firstChild);
-            }
+        var msg = document.getElementById("msg");
+        var log = document.getElementById("log");
+        function appendLog(item) {
+            log.insertBefore(item, log.firstChild);
+        }
         function Chat () {
             var conn;
             document.getElementById("form").onsubmit = function () {
@@ -124,13 +120,6 @@
             }
         };
         Chat();
-        var log = document.getElementById("log");
-        log.addEventListener("scroll", function() {
-            if (log.scrollTop + log.clientHeight >= log.scrollHeight) {
-                unreadMessages = 0;
-                document.getElementById("unreadBadge").textContent = unreadMessages;
-            }
-        });
 
         function appendMessage(data) {
             if (data ==null){
@@ -138,13 +127,109 @@
             }
             var date = new Date(data.CreatedAt);
             var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-            var formattedMessage = "<span class='text-danger'>" + time + "</span>&nbsp;<b>" + data.Sender + "</b>:&nbsp;"+ data.Body ;
+            var formattedMessage = "<span class='text-secondary'>" + time + "&nbsp;<b>" + data.Sender.charAt(0).toUpperCase() + data.Sender.slice(1) + "</b>:</span>&nbsp;<b style='font-size:18px;'>"+ data.Body+"</b>" ;
             var item = document.createElement("div");
             item.innerHTML = formattedMessage;
             appendLog(item);
             unreadMessages++;
             document.getElementById("unreadBadge").textContent = unreadMessages;
         }
+
+
+            
+        var videoPlayer = document.getElementById('videoPlayer');
+        videoPlayer.muted = true;
+
+        var skipBackwardButton = document.getElementById('skipBackward');
+        var skipForwardButton = document.getElementById('skipForward');
+        var FinalPause = true;
+        videoPlayer.addEventListener('pause', function() {
+            sendVideoStatus(true, this.currentTime);
+            FinalPause = true
+        });
+
+        videoPlayer.addEventListener('play', function() {
+            sendVideoStatus(false, this.currentTime);
+            FinalPause = false
+        });
+
+        videoPlayer.addEventListener('seeked', function() {
+            var isPaused = this.paused;
+            sendVideoStatus(isPaused, this.currentTime);
+        });
+
+        skipBackwardButton.addEventListener('click', function() {
+            videoPlayer.currentTime -= 10;
+        });
+
+        skipForwardButton.addEventListener('click', function() {
+            videoPlayer.currentTime += 10;
+        });
+
+        function sendVideoStatus(isPaused, currentTime) {
+            var hours = Math.floor(currentTime / 3600);
+            var minutes = Math.floor((currentTime % 3600) / 60);
+            var seconds = Math.floor(currentTime % 60);
+            var timeline = hours + ":" + minutes + ":" + seconds;
+
+            fetch('/video/set', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pause: FinalPause,
+                    timeline: timeline,
+                    user: Sender, 
+                }),
+            })
+            .then(response => response)
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+        setInterval(() => {
+            sendVideoStatus(videoPlayer.isPaused, videoPlayer.currentTime);
+        }, 5000); //TODO: Get This from User
+
+
+
+        // Fetch video status
+        function fetchVideoStatus() {
+            fetch('/video/get', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user: Sender, 
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                //var videoPlayer = document.getElementById('videoPlayer');
+                var timeline = data.timeline.split(':');
+                var hours = parseInt(timeline[0]);
+                var minutes = parseInt(timeline[1]);
+                var seconds = parseInt(timeline[2]);
+                var timeInSeconds = hours * 3600 + minutes * 60 + seconds;
+                
+                videoPlayer.currentTime = timeInSeconds;
+                FinalPause = data.pause;
+                if (data.pause) {
+                    console.log("pause the video")
+                } else {
+                    console.log("play the video")
+                    videoPlayer.play();
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+        
+        fetchVideoStatus();
+
     </script>
 </body>
 <script src="/static/js/bootstrap.bundle.min.js"></script>

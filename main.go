@@ -21,6 +21,9 @@ func main() {
 	log.Printf("%+v\n", cfg)
 
 	messageStore, disposeRedis, err := store.NewRedisMessageStore(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer disposeRedis()
 	engine := html.New("internal/views/", ".html")
 
@@ -41,25 +44,26 @@ func main() {
 			Cfg: cfg,
 			JWT: jwt.NewAccessJWT(cfg),
 		}
-		videoHandler := handler.Video{
-			Cfg: cfg,
+		userAndVideo, cancel, err := store.NewRedisUserAndVideStore(cfg)
+		if err != nil {
+			log.Fatal(err)
 		}
-		uploadHandler := handler.Upload{
-			Cfg: cfg,
+		defer cancel()
+		videoHandler := handler.Video{
+			Cfg:   cfg,
+			Store: userAndVideo,
 		}
 		chatHandler := handler.NewChat(cfg, messageStore)
 
 		app.Get("/", func(c *fiber.Ctx) error { return c.Redirect("/home", fiber.StatusTemporaryRedirect) })
 		homeGroup := app.Group("/home", authHandler.UserMiddleWare)
 		authGroup := app.Group("/auth")
-		videoGroup := app.Group("/video")
-		uploadGroup := app.Group("/upload")
+		videoGroup := app.Group("/video", authHandler.UserMiddleWare)
 		ChatGroup := app.Group("/chat", authHandler.UserMiddleWare)
 
 		homeHandler.Register(homeGroup)
 		authHandler.Register(authGroup)
 		videoHandler.Register(videoGroup)
-		uploadHandler.Register(uploadGroup)
 		chatHandler.Register(ChatGroup)
 	}
 
