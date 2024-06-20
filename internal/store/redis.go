@@ -19,11 +19,14 @@ const (
 	GetChatMessageScript     = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
 	MAX_LENGTH_OF_MESSAGE    = 6
 	ExpireUserVideoInfoAfter = 120
+	ExpireUploadedURLTime    = 600
 )
 
 var (
-	TimelineIsEmpty = errors.New("Timeline is empty")
-	PauseIsEmpty    = errors.New("Pause is empty")
+	TimelineIsEmpty     = errors.New("Timeline is empty")
+	PauseIsEmpty        = errors.New("Pause is empty")
+	UploadedURLIsEmpty  = errors.New("Uploaded url is empty")
+	UploadedUUIDIsEmpty = errors.New("Uploaded url is empty")
 )
 
 type RedisMessageStore struct {
@@ -200,6 +203,39 @@ func (r *RedisUserAndVideStore) GetUserVideoInfo(ctx context.Context, user model
 		return model.VideoControllers{}, PauseIsEmpty
 	}
 	return vc, err
+}
+func (r *RedisUserAndVideStore) uploadedVideoID() string {
+	return "uploadedURL"
+}
+func (r *RedisUserAndVideStore) SaveUploadedVideo(ctx context.Context, url model.UploadedVideo) error {
+	return r.client.Do(ctx, r.client.B().Hset().Key(r.uploadedVideoID()).FieldValue().FieldValue("url", url.URL).FieldValue("uuid", url.UUID).Build()).Error()
+}
+
+func (r *RedisUserAndVideStore) GetUploadedVideo(ctx context.Context) (model.UploadedVideo, error) {
+	var url model.UploadedVideo
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.uploadedVideoID()).Build()).AsStrMap()
+	if err != nil {
+		return model.UploadedVideo{}, err
+	}
+
+	u, ok := data["url"]
+	if ok {
+		url.URL = u
+	} else {
+		return model.UploadedVideo{}, UploadedURLIsEmpty
+	}
+
+	uu, ok := data["uuid"]
+	if ok {
+		url.UUID = uu
+	} else {
+		return model.UploadedVideo{}, UploadedUUIDIsEmpty
+	}
+
+	return url, nil
+}
+func (r *RedisUserAndVideStore) RemoveUploadedVideo(ctx context.Context) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.uploadedVideoID()).Build()).Error()
 }
 
 // func (r *RedisUserAndVideStore) SaveUser(ctx context.Context, user model.User) error {

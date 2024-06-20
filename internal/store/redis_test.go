@@ -3,11 +3,13 @@ package store
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,6 +87,30 @@ func TestVideoController(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, fetched, vc)
 		fmt.Printf("fetched %+v\n", fetched)
+	}
+
+	url := model.UploadedVideo{
+		URL:  "foo.bar",
+		UUID: uuid.NewString(),
+	}
+	{
+		err := redis.SaveUploadedVideo(ctx, url)
+		assert.NoError(t, err)
+	}
+	{
+		data, err := redis.GetUploadedVideo(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, data, url)
+		log.Printf("%+v\n", data)
+	}
+
+	{
+		err := redis.RemoveUploadedVideo(ctx)
+		assert.NoError(t, err)
+
+		data, err := redis.GetUploadedVideo(ctx)
+		assert.Error(t, err)
+		assert.NotEqual(t, data, url)
 	}
 }
 
