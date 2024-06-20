@@ -167,10 +167,6 @@
         var seconds = Math.floor(currentTime % 60);
         var timeline = hours + ":" + minutes + ":" + seconds;
 
-        // Extract the video name from the src attribute
-        var videoSrc = videoPlayer.getAttribute('src');
-        var videoName = videoSrc.substring(videoSrc.lastIndexOf('/') + 1);
-
         fetch('/video/set', {
             method: 'POST',
             headers: {
@@ -179,7 +175,7 @@
             body: JSON.stringify({
                 pause: isPaused,
                 timeline: timeline,
-                movie: videoName, 
+                user: Sender, 
             }),
         })
         .then(response => response)
