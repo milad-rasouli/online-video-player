@@ -29,7 +29,7 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	{
-		log.Printf("set video %s", string(c.BodyRaw()))
+		log.Printf("set video %s", string(c.BodyRaw())) //TODO: remove this line
 		err = c.BodyParser(&vc)
 		if err != nil {
 			log.Printf("setVideoControllers body parse error %s", err)
@@ -45,6 +45,7 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 		if fullName != vc.User {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
+		log.Printf("Set valid video %+v\n", vc)
 	}
 
 	{
