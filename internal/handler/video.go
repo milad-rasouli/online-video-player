@@ -20,12 +20,13 @@ import (
 
 const (
 	DefaultVideoPath   = "./internal/static/video/default.mkv"
-	DownloadDistention = "./output.mkv"
+	DownloadDistention = "./internal/static/video/temp.mkv"
 )
 
 type Video struct {
-	Cfg   config.Config
-	Store store.UserAndVideoStore
+	Cfg        config.Config
+	Store      store.UserAndVideoStore
+	cancelFunc context.CancelFunc
 }
 
 func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
@@ -93,6 +94,7 @@ type DownloadProgress struct {
 	ReceivedSize uint64
 	StartTime    time.Time
 	Store        store.UserAndVideoStore
+	User         string
 }
 
 func (wc *DownloadProgress) Write(p []byte) (int, error) {
@@ -115,11 +117,15 @@ func (wc *DownloadProgress) PrintProgress() {
 		TotalSize:    wc.TotalSize,
 		ReceivedSize: wc.ReceivedSize,
 		StartTime:    wc.StartTime.Unix(),
+		Percent:      percent,
+		Speed:        speed,
+		User:         wc.User,
+		TimeLeft:     timeLeft.String(),
 	})
 }
 
 // https://dl5.freeserver.top/www2/film/animation/Weekends.2017.480p.DigiMoviez.mkv?md5=Gr9cGCfzCjt753FRU3VrbQ&expires=1719219153
-func (u *Video) download(url model.UploadedVideo) {
+func (u *Video) download(ctx context.Context, url model.UploadedVideo, user string) {
 	file, err := os.Create(DownloadDistention)
 	if err != nil {
 		fmt.Println(err)
@@ -127,7 +133,13 @@ func (u *Video) download(url model.UploadedVideo) {
 	}
 	defer file.Close()
 
-	resp, err := http.Get(url.URL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.URL, nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -138,6 +150,7 @@ func (u *Video) download(url model.UploadedVideo) {
 		TotalSize: uint64(resp.ContentLength),
 		StartTime: time.Now(),
 		Store:     u.Store,
+		User:      user,
 	}
 	if _, err = io.Copy(file, io.TeeReader(resp.Body, progress)); err != nil {
 		fmt.Println(err)
@@ -145,6 +158,13 @@ func (u *Video) download(url model.UploadedVideo) {
 	}
 
 	fmt.Print("\nDownload complete.\n")
+	err = os.Rename(DownloadDistention, DefaultVideoPath)
+	if err != nil {
+		fmt.Println("Error moving file:", err)
+		return
+	}
+
+	fmt.Print("\nFile moved successfully.\n")
 }
 
 func (u *Video) uuidResponse(uuid string) map[string]string {
@@ -153,6 +173,12 @@ func (u *Video) uuidResponse(uuid string) map[string]string {
 	}
 }
 func (u *Video) PostUpload(c *fiber.Ctx) error {
+	var userFullName = c.Locals("userFullName")
+	fullName, ok := userFullName.(string)
+	if !ok {
+		log.Printf("PostUpload invalid userFullName error")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
 	log.Println("upload Video is called")
 	{
 		up, _ := u.Store.GetUploadedVideo(c.Context())
@@ -182,26 +208,43 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 			UUID: rup.UUID,
 		})
 		go func() {
-			defer u.Store.RemoveUploadedVideo(context.TODO())
-			u.download(model.UploadedVideo{
+			var downloadCtx context.Context
+			downloadCtx, u.cancelFunc = context.WithCancel(context.Background())
+			defer u.Store.RemoveUploadedVideo(context.Background())
+			defer u.Store.RemoveDownloadVideoStatus(context.Background())
+			u.download(downloadCtx, model.UploadedVideo{
 				URL:  rup.URL,
 				UUID: rup.UUID,
-			})
+			}, fullName)
 		}()
 	}
 	return c.SendStatus(fiber.StatusOK)
 }
 
 func (u *Video) PostUploadStatus(c *fiber.Ctx) error {
-	ds, err := u.Store.GetDownloadVideoStatus(c.Context())
-	if err != nil {
-		log.Printf("PostUploadStatus store error")
-		return c.SendStatus(fiber.StatusInternalServerError)
+	ds, _ := u.Store.GetDownloadVideoStatus(c.Context())
+	if ds.User == "" {
+		return c.SendStatus(fiber.StatusOK)
 	}
+	// if err != nil {
+	// 	log.Printf("PostUploadStatus store error") //TODO: Fix the error handling
+	// 	return c.SendStatus(fiber.StatusInternalServerError)
+	// }
 
 	return c.JSON(ds)
 }
 
+func (u *Video) PostCancelUpload(c *fiber.Ctx) error {
+	if u.cancelFunc != nil {
+		u.cancelFunc()
+	} else {
+		log.Println("early download cancel function")
+		return c.SendStatus(fiber.StatusTooEarly)
+	}
+	u.Store.RemoveUploadedVideo(c.Context())
+	u.Store.RemoveDownloadVideoStatus(c.Context())
+	return c.SendStatus(fiber.StatusOK)
+}
 func (u *Video) Video(c *fiber.Ctx) error {
 	videoPath := DefaultVideoPath
 	fasthttp.ServeFile(c.Context(), videoPath)
@@ -211,6 +254,7 @@ func (u *Video) Video(c *fiber.Ctx) error {
 
 func (u *Video) Register(c fiber.Router) {
 	c.Post("/upload", u.PostUpload)
+	c.Post("/cancel-upload", u.PostCancelUpload)
 	c.Post("/upload-status", u.PostUploadStatus)
 	c.Post("/set", u.PostSetVideoControllers)
 	c.Post("/get", u.PostGetVideoControllers)

@@ -11,6 +11,7 @@ type UploadedVideo struct {
 }
 
 type DownloadStatus struct {
+	User         string  `json:"user"`
 	TotalSize    uint64  `json:"totalSize"`
 	ReceivedSize uint64  `json:"receivedSize"`
 	StartTime    int64   `json:"startTime"`

@@ -114,6 +114,7 @@ func TestVideoController(t *testing.T) {
 	}
 
 	ds := model.DownloadStatus{
+		User:         "foo",
 		TotalSize:    10101,
 		ReceivedSize: 101,
 		StartTime:    time.Now().Unix(),

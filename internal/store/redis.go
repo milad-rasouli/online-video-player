@@ -38,7 +38,8 @@ var (
 	DownloadSpeedEmpty                = errors.New("Download status speed is empty")
 	DownloadStatusPercentError        = errors.New("Download status percent parse error")
 	DownloadPercentEmpty              = errors.New("Download status percent is empty")
-	DownloadTimeLeftEmpty             = errors.New("Download status Time left is empty")
+	DownloadTimeLeftEmpty             = errors.New("Download status time left is empty")
+	DownloadStatusUserIsEmpty         = errors.New("Download status user is empty")
 )
 
 type RedisMessageStore struct {
@@ -267,6 +268,7 @@ func (r *RedisUserAndVideStore) SaveDownloadVideoStatus(ctx context.Context, sta
 		Hset().
 		Key(r.downloadStatusID()).
 		FieldValue().
+		FieldValue("user", status.User).
 		FieldValue("totalSize", strconv.FormatUint(status.TotalSize, 10)).
 		FieldValue("startTime", strconv.FormatInt(status.StartTime, 10)).
 		FieldValue("receivedSize", strconv.FormatUint(status.ReceivedSize, 10)).
@@ -290,6 +292,12 @@ func (r *RedisUserAndVideStore) GetDownloadVideoStatus(ctx context.Context) (mod
 		return model.DownloadStatus{}, err
 	}
 
+	usr, ok := data["user"]
+	if ok {
+		status.User = usr
+	} else {
+		return model.DownloadStatus{}, DownloadStatusUserIsEmpty
+	}
 	t, ok := data["totalSize"]
 	if ok {
 		status.TotalSize, err = strconv.ParseUint(t, 10, 64)
