@@ -17,4 +17,7 @@ type UserAndVideoStore interface {
 	SaveUploadedVideo(context.Context, model.UploadedVideo) error
 	GetUploadedVideo(context.Context) (model.UploadedVideo, error)
 	RemoveUploadedVideo(context.Context) error
+	SaveDownloadVideoStatus(context.Context, model.DownloadStatus) error
+	GetDownloadVideoStatus(context.Context) (model.DownloadStatus, error)
+	RemoveDownloadVideoStatus(context.Context) error
 }

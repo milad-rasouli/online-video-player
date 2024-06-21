@@ -92,6 +92,7 @@ type DownloadProgress struct {
 	TotalSize    uint64
 	ReceivedSize uint64
 	StartTime    time.Time
+	Store        store.UserAndVideoStore
 }
 
 func (wc *DownloadProgress) Write(p []byte) (int, error) {
@@ -102,12 +103,19 @@ func (wc *DownloadProgress) Write(p []byte) (int, error) {
 }
 
 func (wc *DownloadProgress) PrintProgress() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
 	duration := time.Since(wc.StartTime)
 	speed := float64(wc.ReceivedSize) / duration.Seconds()
 	percent := float64(wc.ReceivedSize) / float64(wc.TotalSize) * 100
 	timeLeft := time.Duration(float64(wc.TotalSize-wc.ReceivedSize)/speed) * time.Second
 	fmt.Printf("\r%s", strings.Repeat(" ", 50))
 	fmt.Printf("\rDownloading... %.2f%% complete, speed: %.2f bytes/sec, time left: %v", percent, speed, timeLeft)
+	wc.Store.SaveDownloadVideoStatus(ctx, model.DownloadStatus{
+		TotalSize:    wc.TotalSize,
+		ReceivedSize: wc.ReceivedSize,
+		StartTime:    wc.StartTime.Unix(),
+	})
 }
 
 // https://dl5.freeserver.top/www2/film/animation/Weekends.2017.480p.DigiMoviez.mkv?md5=Gr9cGCfzCjt753FRU3VrbQ&expires=1719219153
@@ -129,6 +137,7 @@ func (u *Video) download(url model.UploadedVideo) {
 	progress := &DownloadProgress{
 		TotalSize: uint64(resp.ContentLength),
 		StartTime: time.Now(),
+		Store:     u.Store,
 	}
 	if _, err = io.Copy(file, io.TeeReader(resp.Body, progress)); err != nil {
 		fmt.Println(err)
@@ -184,7 +193,13 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 }
 
 func (u *Video) PostUploadStatus(c *fiber.Ctx) error {
-	return c.SendStatus(fiber.StatusOK)
+	ds, err := u.Store.GetDownloadVideoStatus(c.Context())
+	if err != nil {
+		log.Printf("PostUploadStatus store error")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.JSON(ds)
 }
 
 func (u *Video) Video(c *fiber.Ctx) error {

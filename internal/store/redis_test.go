@@ -116,16 +116,20 @@ func TestVideoController(t *testing.T) {
 	ds := model.DownloadStatus{
 		TotalSize:    10101,
 		ReceivedSize: 101,
-		StartTime:    time.Unix(time.Now().Unix(), 0),
+		StartTime:    time.Now().Unix(),
+		Speed:        12.3,
+		Percent:      11.2,
+		TimeLeft:     "3 days",
 	}
 	{
 		err := redis.SaveDownloadVideoStatus(ctx, ds)
 		assert.NoError(t, err)
-		// <-time.After(time.Millisecond * 50)
+
 		fetched, err := redis.GetDownloadVideoStatus(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, ds, fetched)
 		log.Printf("Download status %+v\n", fetched)
+
 		err = redis.RemoveDownloadVideoStatus(ctx)
 		assert.NoError(t, err)
 
