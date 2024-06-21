@@ -23,9 +23,11 @@ func (c *Config) Read() error {
 	var (
 		err error
 	)
-	err = godotenv.Load()
-	if err != nil {
-		return err
+	if os.Getenv("DEBUG") != "false" {
+		err = godotenv.Load()
+		if err != nil {
+			return err
+		}
 	}
 
 	c.Password = os.Getenv("USER_PASSWORD")
