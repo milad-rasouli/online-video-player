@@ -247,9 +247,11 @@
                 FinalPause = data.pause;
                 if (data.pause) {
                     console.log("pause the video")
+                    videoPlayer.muted = false; 
                 } else {
                     console.log("play the video")
                     videoPlayer.play();
+                    videoPlayer.muted = false; 
                 }
             })
             .catch((error) => {
