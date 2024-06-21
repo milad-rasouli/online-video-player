@@ -68,7 +68,7 @@ func TestVideoController(t *testing.T) {
 		fmt.Printf("%+v\n", redis)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 	user := model.User{
 		FullName: "foo",
@@ -111,6 +111,27 @@ func TestVideoController(t *testing.T) {
 		data, err := redis.GetUploadedVideo(ctx)
 		assert.Error(t, err)
 		assert.NotEqual(t, data, url)
+	}
+
+	ds := model.DownloadStatus{
+		TotalSize:    10101,
+		ReceivedSize: 101,
+		StartTime:    time.Unix(time.Now().Unix(), 0),
+	}
+	{
+		err := redis.SaveDownloadVideoStatus(ctx, ds)
+		assert.NoError(t, err)
+		// <-time.After(time.Millisecond * 50)
+		fetched, err := redis.GetDownloadVideoStatus(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, ds, fetched)
+		log.Printf("Download status %+v\n", fetched)
+		err = redis.RemoveDownloadVideoStatus(ctx)
+		assert.NoError(t, err)
+
+		fetched2, err := redis.GetDownloadVideoStatus(ctx)
+		assert.Error(t, err)
+		assert.NotEqual(t, ds, fetched2)
 	}
 }
 

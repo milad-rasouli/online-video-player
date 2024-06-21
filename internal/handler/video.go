@@ -110,7 +110,7 @@ func (wc *DownloadProgress) PrintProgress() {
 	fmt.Printf("\rDownloading... %.2f%% complete, speed: %.2f bytes/sec, time left: %v", percent, speed, timeLeft)
 }
 
-// "https://dl5.freeserver.top/www2/film/animation/Weekends.2017.480p.DigiMoviez.mkv?md5=Gr9cGCfzCjt753FRU3VrbQ&expires=1719219153"
+// https://dl5.freeserver.top/www2/film/animation/Weekends.2017.480p.DigiMoviez.mkv?md5=Gr9cGCfzCjt753FRU3VrbQ&expires=1719219153
 func (u *Video) download(url model.UploadedVideo) {
 	file, err := os.Create(DownloadDistention)
 	if err != nil {
@@ -144,6 +144,7 @@ func (u *Video) uuidResponse(uuid string) map[string]string {
 	}
 }
 func (u *Video) PostUpload(c *fiber.Ctx) error {
+	log.Println("upload Video is called")
 	{
 		up, _ := u.Store.GetUploadedVideo(c.Context())
 		// if (err != nil && !errors.Is(err, store.UploadedURLIsEmpty)) || (err != nil && !errors.Is(err, store.UploadedUUIDIsEmpty)) {
@@ -151,6 +152,7 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 		// 	return c.SendStatus(fiber.StatusInternalServerError)
 		// } //TODO: Handel this error part
 		if len(up.UUID) > 0 {
+			log.Println("UploadVideo returned uuid ", u.uuidResponse(up.UUID))
 			return c.JSON(u.uuidResponse(up.UUID))
 		}
 	}
