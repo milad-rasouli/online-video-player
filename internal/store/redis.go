@@ -19,11 +19,27 @@ const (
 	GetChatMessageScript     = " local messages = redis.call('LRANGE', KEYS[1], 0, -1) local valid_messages = {} for i, message_key in ipairs(messages) do if redis.call('EXISTS', message_key) == 1 then local message = redis.call('HGETALL', message_key) table.insert(valid_messages, message) else redis.call('LREM', KEYS[1], 0, message_key) end end return valid_messages "
 	MAX_LENGTH_OF_MESSAGE    = 6
 	ExpireUserVideoInfoAfter = 120
+	ExpireUploadedURLTime    = 1200
+	ExpireDownloadStatusTime = 15
 )
 
 var (
-	TimelineIsEmpty = errors.New("Timeline is empty")
-	PauseIsEmpty    = errors.New("Pause is empty")
+	TimelineIsEmpty                   = errors.New("Timeline is empty")
+	PauseIsEmpty                      = errors.New("Pause is empty")
+	UploadedURLIsEmpty                = errors.New("Uploaded url is empty")
+	UploadedUUIDIsEmpty               = errors.New("Uploaded url is empty")
+	DownloadStatusParseTotalSizeError = errors.New("Download status total size parse error")
+	DownloadStatusTotalSizeIsEmpty    = errors.New("Download status total size is empty")
+	DownloadStatusStartTimeIsEmpty    = errors.New("Download status start time is empty")
+	DownloadStatusParseStartTimeError = errors.New("Download status start time parse error")
+	DownloadStatusReceivedSizeError   = errors.New("Download status received size parse error")
+	DownloadReceivedSizeIsEmpty       = errors.New("Download status received size is empty")
+	DownloadStatusSpeedError          = errors.New("Download status speed parse error")
+	DownloadSpeedEmpty                = errors.New("Download status speed is empty")
+	DownloadStatusPercentError        = errors.New("Download status percent parse error")
+	DownloadPercentEmpty              = errors.New("Download status percent is empty")
+	DownloadTimeLeftEmpty             = errors.New("Download status time left is empty")
+	DownloadStatusUserIsEmpty         = errors.New("Download status user is empty")
 )
 
 type RedisMessageStore struct {
@@ -200,6 +216,149 @@ func (r *RedisUserAndVideStore) GetUserVideoInfo(ctx context.Context, user model
 		return model.VideoControllers{}, PauseIsEmpty
 	}
 	return vc, err
+}
+func (r *RedisUserAndVideStore) uploadedVideoID() string {
+	return "uploadedURL"
+}
+func (r *RedisUserAndVideStore) SaveUploadedVideo(ctx context.Context, url model.UploadedVideo) error {
+	cmds := make(rueidis.Commands, 0, 2)
+	cmds = append(cmds, r.client.B().Hset().Key(r.uploadedVideoID()).FieldValue().FieldValue("url", url.URL).FieldValue("uuid", url.UUID).Build())
+	cmds = append(cmds, r.client.B().Expire().Key(r.uploadedVideoID()).Seconds(ExpireUploadedURLTime).Build())
+
+	for _, resp := range r.client.DoMulti(ctx, cmds...) {
+		if err := resp.Error(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *RedisUserAndVideStore) GetUploadedVideo(ctx context.Context) (model.UploadedVideo, error) {
+	var url model.UploadedVideo
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.uploadedVideoID()).Build()).AsStrMap()
+	if err != nil {
+		return model.UploadedVideo{}, err
+	}
+
+	u, ok := data["url"]
+	if ok {
+		url.URL = u
+	} else {
+		return model.UploadedVideo{}, UploadedURLIsEmpty
+	}
+
+	uu, ok := data["uuid"]
+	if ok {
+		url.UUID = uu
+	} else {
+		return model.UploadedVideo{}, UploadedUUIDIsEmpty
+	}
+
+	return url, nil
+}
+func (r *RedisUserAndVideStore) RemoveUploadedVideo(ctx context.Context) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.uploadedVideoID()).Build()).Error()
+}
+func (r *RedisUserAndVideStore) downloadStatusID() string {
+	return "downloadStatus"
+}
+func (r *RedisUserAndVideStore) SaveDownloadVideoStatus(ctx context.Context, status model.DownloadStatus) error {
+	cmds := make(rueidis.Commands, 0, 2)
+	cmds = append(cmds, r.client.B().
+		Hset().
+		Key(r.downloadStatusID()).
+		FieldValue().
+		FieldValue("user", status.User).
+		FieldValue("totalSize", strconv.FormatUint(status.TotalSize, 10)).
+		FieldValue("startTime", strconv.FormatInt(status.StartTime, 10)).
+		FieldValue("receivedSize", strconv.FormatUint(status.ReceivedSize, 10)).
+		FieldValue("speed", strconv.FormatFloat(status.Speed, 'E', -1, 32)).
+		FieldValue("percent", strconv.FormatFloat(status.Percent, 'E', -1, 32)).
+		FieldValue("timeLeft", status.TimeLeft).
+		Build())
+	cmds = append(cmds, r.client.B().Expire().Key(r.downloadStatusID()).Seconds(ExpireDownloadStatusTime).Build())
+
+	for _, resp := range r.client.DoMulti(ctx, cmds...) {
+		if err := resp.Error(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (r *RedisUserAndVideStore) GetDownloadVideoStatus(ctx context.Context) (model.DownloadStatus, error) {
+	var status model.DownloadStatus
+	data, err := r.client.Do(ctx, r.client.B().Hgetall().Key(r.downloadStatusID()).Build()).AsStrMap()
+	if err != nil {
+		return model.DownloadStatus{}, err
+	}
+
+	usr, ok := data["user"]
+	if ok {
+		status.User = usr
+	} else {
+		return model.DownloadStatus{}, DownloadStatusUserIsEmpty
+	}
+	t, ok := data["totalSize"]
+	if ok {
+		status.TotalSize, err = strconv.ParseUint(t, 10, 64)
+		if err != nil {
+			return model.DownloadStatus{}, DownloadStatusParseTotalSizeError
+		}
+	} else {
+		return model.DownloadStatus{}, DownloadStatusTotalSizeIsEmpty
+	}
+
+	s, ok := data["startTime"]
+	if ok {
+		status.StartTime, err = strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return model.DownloadStatus{}, DownloadStatusParseStartTimeError
+		}
+	} else {
+		return model.DownloadStatus{}, DownloadStatusStartTimeIsEmpty
+	}
+
+	rs, ok := data["receivedSize"]
+	if ok {
+		status.ReceivedSize, err = strconv.ParseUint(rs, 10, 64)
+		if err != nil {
+			return model.DownloadStatus{}, DownloadStatusReceivedSizeError
+		}
+	} else {
+		return model.DownloadStatus{}, DownloadReceivedSizeIsEmpty
+	}
+
+	sd, ok := data["speed"]
+	if ok {
+		status.Speed, err = strconv.ParseFloat(sd, 64)
+		if err != nil {
+			return model.DownloadStatus{}, DownloadStatusSpeedError
+		}
+	} else {
+		return model.DownloadStatus{}, DownloadSpeedEmpty
+	}
+
+	pt, ok := data["percent"]
+	if ok {
+		status.Percent, err = strconv.ParseFloat(pt, 64)
+		if err != nil {
+			return model.DownloadStatus{}, DownloadStatusPercentError
+		}
+	} else {
+		return model.DownloadStatus{}, DownloadPercentEmpty
+	}
+
+	tl, ok := data["timeLeft"]
+	if ok {
+		status.TimeLeft = tl
+	} else {
+		return model.DownloadStatus{}, DownloadTimeLeftEmpty
+	}
+
+	return status, nil
+}
+func (r *RedisUserAndVideStore) RemoveDownloadVideoStatus(ctx context.Context) error {
+	return r.client.Do(ctx, r.client.B().Del().Key(r.downloadStatusID()).Build()).Error()
 }
 
 // func (r *RedisUserAndVideStore) SaveUser(ctx context.Context, user model.User) error {

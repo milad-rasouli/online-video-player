@@ -3,11 +3,13 @@ package store
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
 	"github.com/Milad75Rasouli/online-video-player/internal/model"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,7 +68,7 @@ func TestVideoController(t *testing.T) {
 		fmt.Printf("%+v\n", redis)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 	user := model.User{
 		FullName: "foo",
@@ -85,6 +87,56 @@ func TestVideoController(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, fetched, vc)
 		fmt.Printf("fetched %+v\n", fetched)
+	}
+
+	url := model.UploadedVideo{
+		URL:  "foo.bar",
+		UUID: uuid.NewString(),
+	}
+	{
+		err := redis.SaveUploadedVideo(ctx, url)
+		assert.NoError(t, err)
+	}
+	{
+		data, err := redis.GetUploadedVideo(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, data, url)
+		log.Printf("%+v\n", data)
+	}
+
+	{
+		err := redis.RemoveUploadedVideo(ctx)
+		assert.NoError(t, err)
+
+		data, err := redis.GetUploadedVideo(ctx)
+		assert.Error(t, err)
+		assert.NotEqual(t, data, url)
+	}
+
+	ds := model.DownloadStatus{
+		User:         "foo",
+		TotalSize:    10101,
+		ReceivedSize: 101,
+		StartTime:    time.Now().Unix(),
+		Speed:        12.3,
+		Percent:      11.2,
+		TimeLeft:     "3 days",
+	}
+	{
+		err := redis.SaveDownloadVideoStatus(ctx, ds)
+		assert.NoError(t, err)
+
+		fetched, err := redis.GetDownloadVideoStatus(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, ds, fetched)
+		log.Printf("Download status %+v\n", fetched)
+
+		err = redis.RemoveDownloadVideoStatus(ctx)
+		assert.NoError(t, err)
+
+		fetched2, err := redis.GetDownloadVideoStatus(ctx)
+		assert.Error(t, err)
+		assert.NotEqual(t, ds, fetched2)
 	}
 }
 

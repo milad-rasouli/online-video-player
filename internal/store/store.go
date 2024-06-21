@@ -14,4 +14,10 @@ type MessageStore interface {
 type UserAndVideoStore interface {
 	SaveUserVideoInfo(context.Context, model.User, model.VideoControllers) error
 	GetUserVideoInfo(context.Context, model.User) (model.VideoControllers, error)
+	SaveUploadedVideo(context.Context, model.UploadedVideo) error
+	GetUploadedVideo(context.Context) (model.UploadedVideo, error)
+	RemoveUploadedVideo(context.Context) error
+	SaveDownloadVideoStatus(context.Context, model.DownloadStatus) error
+	GetDownloadVideoStatus(context.Context) (model.DownloadStatus, error)
+	RemoveDownloadVideoStatus(context.Context) error
 }
