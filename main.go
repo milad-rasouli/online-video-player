@@ -9,6 +9,7 @@ import (
 	"github.com/Milad75Rasouli/online-video-player/internal/store"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
+	_ "go.uber.org/automaxprocs"
 )
 
 func main() {

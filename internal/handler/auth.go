@@ -123,7 +123,7 @@ func (a *Auth) UserMiddleWare(c *fiber.Ctx) error {
 			return a.removeCookiesAndRedirectToEntrance(c)
 		}
 	}
-	log.Println("auth middleware ", user.FullName)
+	// log.Println("auth middleware ", user.FullName)
 	c.Locals("userFullName", user.FullName)
 	return c.Next()
 }

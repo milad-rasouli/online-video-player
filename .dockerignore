@@ -1,0 +1,6 @@
+*.mkv
+*.mp4
+.github
+bin
+.gitignore
+README.md

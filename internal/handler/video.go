@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
@@ -42,7 +41,6 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	{
-		log.Printf("set video %s", string(c.BodyRaw())) //TODO: remove this line
 		err = c.BodyParser(&vc)
 		if err != nil {
 			log.Printf("setVideoControllers body parse error %s", err)
@@ -58,7 +56,7 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 		if fullName != vc.User {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
-		log.Printf("Set valid video %+v\n", vc)
+		// log.Printf("Set valid video %+v\n", vc)
 	}
 
 	{
@@ -80,7 +78,7 @@ func (u *Video) PostGetVideoControllers(c *fiber.Ctx) error {
 		log.Printf("PostGetVideoControllers invalid userFullName error")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	log.Printf("video PostGetVideo user is %s", fullName)
+	// log.Printf("video PostGetVideo user is %s", fullName)
 	usrVideoInto, err := u.Store.GetUserVideoInfo(c.Context(), model.User{FullName: fullName})
 	if err != nil {
 		log.Printf("PostGetVideoControllers store error")
@@ -111,8 +109,8 @@ func (wc *DownloadProgress) PrintProgress() {
 	speed := float64(wc.ReceivedSize) / duration.Seconds()
 	percent := float64(wc.ReceivedSize) / float64(wc.TotalSize) * 100
 	timeLeft := time.Duration(float64(wc.TotalSize-wc.ReceivedSize)/speed) * time.Second
-	fmt.Printf("\r%s", strings.Repeat(" ", 50))
-	fmt.Printf("\rDownloading... %.2f%% complete, speed: %.2f bytes/sec, time left: %v", percent, speed, timeLeft)
+	// fmt.Printf("\r%s", strings.Repeat(" ", 50))
+	// fmt.Printf("\rDownloading... %.2f%% complete, speed: %.2f bytes/sec, time left: %v", percent, speed, timeLeft)
 	wc.Store.SaveDownloadVideoStatus(ctx, model.DownloadStatus{
 		TotalSize:    wc.TotalSize,
 		ReceivedSize: wc.ReceivedSize,
@@ -157,14 +155,14 @@ func (u *Video) download(ctx context.Context, url model.UploadedVideo, user stri
 		return
 	}
 
-	fmt.Print("\nDownload complete.\n")
+	// fmt.Print("\nDownload complete.\n")
 	err = os.Rename(DownloadDistention, DefaultVideoPath)
 	if err != nil {
 		fmt.Println("Error moving file:", err)
 		return
 	}
 
-	fmt.Print("\nFile moved successfully.\n")
+	// fmt.Print("\nFile moved successfully.\n")
 }
 
 func (u *Video) uuidResponse(uuid string) map[string]string {
@@ -179,7 +177,7 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 		log.Printf("PostUpload invalid userFullName error")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	log.Println("upload Video is called")
+	// log.Println("upload Video is called")
 	{
 		up, _ := u.Store.GetUploadedVideo(c.Context())
 		// if (err != nil && !errors.Is(err, store.UploadedURLIsEmpty)) || (err != nil && !errors.Is(err, store.UploadedUUIDIsEmpty)) {
@@ -200,7 +198,6 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		log.Printf("video url %s and uuid %s \n", rup.URL, rup.UUID) //TODO: Remove this line
 	}
 	{
 		u.Store.SaveUploadedVideo(c.Context(), model.UploadedVideo{

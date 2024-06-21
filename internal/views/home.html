@@ -36,7 +36,7 @@
             </div>
             <div class="col-4 p-0">
                 <!-- list of videos -->
-                <form id="upload-video-form" class="form" action="POST">
+                <form id="upload-video-form" class="form">
                     <input autofocus autocomplete="off" id="video-url" class="form-control text-light bg-info" type="text" placeholder="Video URL"/>
                     <input type="submit" class="mt-2 btn btn-warning">
                 </form>                
@@ -100,7 +100,11 @@
         }else{
             setInterval(sendAccessTokenRequest, 5000);
         }
-
+        var d = {{.Debug}};
+        var debug ="true";
+        if (d =="false"){
+            debug = "false";
+        }
 
         var msg = document.getElementById("msg");
         var log = document.getElementById("log");
@@ -126,7 +130,13 @@
             };
         
             if (window["WebSocket"]) {
-                conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
+                var conn;
+                if (debug=="true"){
+                    conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
+                }else{
+                    conn = new WebSocket("wss://" + document.location.host + "/chat/ws");
+                }
+
                 conn.onclose = function (evt) {
                     var item = document.createElement("div");
                     item.innerHTML = "<b>Connection closed.</b>";
@@ -247,9 +257,11 @@
                 FinalPause = data.pause;
                 if (data.pause) {
                     console.log("pause the video")
+                    videoPlayer.muted = false; 
                 } else {
                     console.log("play the video")
                     videoPlayer.play();
+                    videoPlayer.muted = false; 
                 }
             })
             .catch((error) => {
