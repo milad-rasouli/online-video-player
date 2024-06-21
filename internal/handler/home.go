@@ -20,6 +20,7 @@ func (h *Home) GetHome(c *fiber.Ctx) error {
 		"Title":   h.Cfg.WebsiteTitle,
 		"Name":    userFullName,
 		"JWTTime": h.Cfg.JWtExpireTime / 6,
+		"Debug":   h.Cfg.Debug,
 	})
 }
 func (h *Home) Register(c fiber.Router) {
