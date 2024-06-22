@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/Milad75Rasouli/online-video-player/internal/config"
@@ -28,7 +27,7 @@ func NewAccessJWT(cfg config.Config) AccessJWT {
 
 func (j AccessJWT) Create(jwtUser model.User) (string, error) {
 	t := time.Now().Add(time.Minute * time.Duration(j.cfg.JWtExpireTime)).Unix()
-	log.Printf("expration time: %s\n", time.Unix(t, 0).String()) //TODO:delete this
+	// log.Printf("expration time: %s\n", time.Unix(t, 0).String()) //TODO:delete this
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"full_name": jwtUser.FullName,
 		"exp":       t,

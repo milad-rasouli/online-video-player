@@ -76,7 +76,7 @@ func (a *Auth) POSTUpdateToken(c *fiber.Ctx) error {
 			return a.removeCookiesAndRedirectToEntrance(c)
 		}
 		a.setTokenCookie(c, token)
-		log.Printf("update new token \"%s\" for %s\n", token, user)
+		// log.Printf("update new token \"%s\" for %s\n", token, user)
 		return c.SendStatus(fiber.StatusCreated)
 	}
 }
