@@ -143,6 +143,10 @@
 
                     conn.onmessage = function(evt) {
                         var data = JSON.parse(evt.data);
+                        if (data!=null){
+                            var audio = new Audio('/static/sound/happy-pop.mp3');
+                            audio.play();
+                        }
                         if (Array.isArray(data)) {
                             for (var i = 0; i < data.length; i++) {
                                 appendMessage(data[i]);
