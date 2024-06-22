@@ -15,7 +15,6 @@ WORKDIR /app
 COPY --from=build /app/player /app
 COPY .env /app/
 COPY start.sh /app/
-RUN mkdir internal
 RUN mkdir -p /app/internal/static/video
 COPY internal/static internal/static
 COPY internal/views internal/views
