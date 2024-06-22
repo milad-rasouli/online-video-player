@@ -111,9 +111,56 @@
         function appendLog(item) {
             log.insertBefore(item, log.firstChild);
         }
-        function Chat () {
+ 
+        function Chat() {
             var conn;
-            document.getElementById("form").onsubmit = function () {
+            var maxRetries = 20; 
+            var retries = 0; 
+            var retryInterval = 3000; 
+
+            function connect() {
+                if (window["WebSocket"]) {
+                    if (debug == "true") {
+                        conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
+                    } else {
+                        conn = new WebSocket("wss://" + document.location.host + "/chat/ws");
+                    }
+
+                    conn.onopen = function(evt) {
+                        retries = 0;
+                    };
+
+                    conn.onclose = function(evt) {
+                        var item = document.createElement("div");
+                        item.innerHTML = "<b>Connection closed.</b>";
+                        appendLog(item);
+
+                        if (retries < maxRetries) {
+                            setTimeout(connect, retryInterval);
+                            retries++;
+                        }
+                    };
+
+                    conn.onmessage = function(evt) {
+                        var data = JSON.parse(evt.data);
+                        if (Array.isArray(data)) {
+                            for (var i = 0; i < data.length; i++) {
+                                appendMessage(data[i]);
+                            }
+                        } else {
+                            appendMessage(data);
+                        }
+                    };
+                } else {
+                    var item = document.createElement("div");
+                    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+                    appendLog(item);
+                }
+            }
+
+            connect(); 
+
+            document.getElementById("form").onsubmit = function() {
                 if (!conn) {
                     return false;
                 }
@@ -128,37 +175,9 @@
                 msg.value = "";
                 return false;
             };
-        
-            if (window["WebSocket"]) {
-                var conn;
-                if (debug=="true"){
-                    conn = new WebSocket("ws://" + document.location.host + "/chat/ws");
-                }else{
-                    conn = new WebSocket("wss://" + document.location.host + "/chat/ws");
-                }
-
-                conn.onclose = function (evt) {
-                    var item = document.createElement("div");
-                    item.innerHTML = "<b>Connection closed.</b>";
-                    appendLog(item);
-                };
-                conn.onmessage = function (evt) {
-                    var data = JSON.parse(evt.data);
-                    if (Array.isArray(data)) {
-                        for (var i = 0; i < data.length; i++) {
-                            appendMessage(data[i]);
-                        }
-                    } else {
-                        appendMessage(data);
-                    }
-                };
-            } else {
-                var item = document.createElement("div");
-                item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
-                appendLog(item);
-            }
-        };
+        }
         Chat();
+
 
         function appendMessage(data) {
             if (data ==null){
