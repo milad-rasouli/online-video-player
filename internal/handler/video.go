@@ -79,10 +79,10 @@ func (u *Video) PostGetVideoControllers(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	// log.Printf("video PostGetVideo user is %s", fullName)
-	usrVideoInto, _ := u.Store.GetUserVideoInfo(c.Context(), model.User{FullName: fullName})
-	if len(usrVideoInto.Timeline) == 0 {
-		log.Printf("PostGetVideoControllers store error")
-		return c.SendStatus(fiber.StatusBadRequest)
+	usrVideoInto, err := u.Store.GetUserVideoInfo(c.Context(), model.User{FullName: fullName})
+	if err != nil {
+		log.Printf("PostGetVideoControllers store error %s\n", err.Error())
+		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 	return c.JSON(usrVideoInto)
 }
