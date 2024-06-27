@@ -26,7 +26,7 @@ type client struct {
 	unread    bool
 }
 type Chat struct {
-	clients    map[*websocket.Conn]*client 
+	clients    map[*websocket.Conn]*client
 	register   chan *websocket.Conn
 	broadcast  chan string
 	unregister chan *websocket.Conn
@@ -35,7 +35,7 @@ type Chat struct {
 }
 
 func NewChat(cfg config.Config, redis store.MessageStore) *Chat {
-	var clients = make(map[*websocket.Conn]*client) 
+	var clients = make(map[*websocket.Conn]*client)
 	var register = make(chan *websocket.Conn)
 	var broadcast = make(chan string)
 	var unregister = make(chan *websocket.Conn)
@@ -85,6 +85,7 @@ func (ch *Chat) GetWebsocket(c *websocket.Conn) {
 				continue
 			}
 			err = parsedMsg.Validate()
+			log.Printf("GetWebsocket got message from user %+v\n", parsedMsg)
 			if err != nil {
 				log.Println("websocket invalid request")
 				msg, err = ch.ErrorMessage("SYSTEM: " + err.Error())
@@ -164,6 +165,7 @@ func (ch *Chat) runHub() {
 				ch.unregister <- connection
 				continue
 			}
+			log.Printf("runHub return old messages: %s\n", msg)
 			connection.WriteMessage(websocket.TextMessage, []byte(msg))
 			ch.clients[connection] = &client{}
 
@@ -175,6 +177,7 @@ func (ch *Chat) runHub() {
 					if c.isClosing {
 						return
 					}
+					log.Printf("runHub user message %s\n", message)
 					if err := connection.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
 						c.isClosing = true
 						log.Println("write error:", err)
