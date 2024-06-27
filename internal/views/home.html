@@ -177,7 +177,7 @@
 
             
         var videoPlayer = document.getElementById('videoPlayer');
-        videoPlayer.muted = true;
+        // videoPlayer.muted = true;
 
         var skipBackwardButton = document.getElementById('skipBackward');
         var skipForwardButton = document.getElementById('skipForward');
@@ -257,11 +257,11 @@
                 FinalPause = data.pause;
                 if (data.pause) {
                     console.log("pause the video")
-                    videoPlayer.muted = false; 
+                    // videoPlayer.muted = false; 
                 } else {
                     console.log("play the video")
                     videoPlayer.play();
-                    videoPlayer.muted = false; 
+                    // videoPlayer.muted = false; 
                 }
             })
             .catch((error) => {
