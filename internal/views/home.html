@@ -187,9 +187,9 @@
             if (data ==null){
                 return;
             }
-            var date = new Date(data.CreatedAt);
+            var date = new Date(data.createdAt);
             var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-            var formattedMessage = "<span class='text-secondary'>" + time + "&nbsp;<b>" + data.Sender.charAt(0).toUpperCase() + data.Sender.slice(1) + "</b>:</span>&nbsp;<b style='font-size:18px;'>"+ data.Body+"</b>" ;
+            var formattedMessage = "<span class='text-secondary'>" + time + "&nbsp;<b>" + data.sender.charAt(0).toUpperCase() + data.sender.slice(1) + "</b>:</span>&nbsp;<b style='font-size:18px;'>"+ data.body+"</b>" ;
             var item = document.createElement("div");
             item.innerHTML = formattedMessage;
             appendLog(item);
@@ -217,6 +217,7 @@
 
         videoPlayer.addEventListener('seeked', function() {
             var isPaused = this.paused;
+            console.log("seeked timeline ", this.currentTime); //TODO: Delete this line
             sendVideoStatus(isPaused, this.currentTime);
         });
 
