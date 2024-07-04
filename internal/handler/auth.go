@@ -51,7 +51,7 @@ func (a *Auth) PostEntrance(c *fiber.Ctx) error {
 		}
 		a.setTokenCookie(c, token)
 	}
-	log.Println("token ", token)
+	// log.Println("token ", token)
 	return a.redirectToHome(c)
 }
 

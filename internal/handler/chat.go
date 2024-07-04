@@ -139,31 +139,38 @@ func (ch *Chat) runHub() {
 	for {
 		select {
 		case connection := <-ch.register:
+			var (
+				msg string
+				err error
+			)
+
 			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*RedisTimeout)
 			defer cancel()
 			mMsg, err := ch.redis.GetAll(ctx)
 			if err != nil {
-				log.Println("websocket unable to dispatch old messages!")
-				msg, err := ch.ErrorMessage("Dispatch SYSTEM: " + err.Error())
+				log.Println("websocket unable to dispatch old messages! error:", err)
+				msg, err = ch.ErrorMessage("Dispatch SYSTEM: " + err.Error())
 				connection.WriteMessage(websocket.TextMessage, []byte(msg))
 				if err != nil {
 					log.Println("websocket json marshal error message", string(err.Error()))
 				}
-				connection.Close()
-				ch.unregister <- connection
-				continue
-			}
-			msg, err := json.Marshal(mMsg)
-			if err != nil {
-				log.Println("websocket unable marshal and dispatch old messages!")
-				msg, err := ch.ErrorMessage("Marshal Dispatch SYSTEM: " + err.Error())
-				connection.WriteMessage(websocket.TextMessage, []byte(msg))
+				// connection.Close()
+				// ch.unregister <- connection
+				// continue
+			} else {
+				bmsg, err := json.Marshal(mMsg)
 				if err != nil {
-					log.Println("websocket json marshal error message", string(err.Error()))
+					log.Println("websocket unable marshal and dispatch old messages! error:", err)
+					msg, err = ch.ErrorMessage("Marshal Dispatch SYSTEM: " + err.Error())
+					connection.WriteMessage(websocket.TextMessage, []byte(msg))
+					if err != nil {
+						log.Println("websocket json marshal error message", string(err.Error()))
+					}
+					// connection.Close()
+					// ch.unregister <- connection
+					// continue
 				}
-				connection.Close()
-				ch.unregister <- connection
-				continue
+				msg = string(bmsg)
 			}
 			log.Printf("runHub return old messages: %s\n", msg)
 			connection.WriteMessage(websocket.TextMessage, []byte(msg))

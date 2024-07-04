@@ -1,7 +1,7 @@
 # online-video-player
 A website that helps you to watch videos with your friends and chat with them.
 here
-[https://github.com/users/Milad75Rasouli/projects/10Here is where you can see my plans for the project.](https://github.com/users/Milad75Rasouli/projects/10) If you have any suggestions to enhance this project, please feel free to open an issue.
+[Here is where you can see my plans for the project.](https://github.com/users/Milad75Rasouli/projects/10) If you have any suggestions to enhance this project, please feel free to open an issue.
 ## How to run the program
 
 1. Run redis:

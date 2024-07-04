@@ -12,11 +12,15 @@
         <div class="row">
             <div class="col-12 p-0">
                 <video id="videoPlayer" class="w-100" height="450px" src="/video" controls>
-                </video>
-                <div class="mt-2">
-                    <button id="skipBackward" class="btn btn-warning mr-2 float-start"> &lt;&nbsp;10s</button>
-                    <button id="skipForward" class="btn btn-warning float-end">10s&nbsp;&gt;</button>
-                </div>
+                </video>                
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <button id="skipBackward" class="btn btn-warning"> < 10s</button>
+                    <div>
+                        <button id="playPauseButton" class="btn btn-warning mx-2">Play</button>
+                        <button id="muteUnmuteButton" class="btn btn-warning mx-2">Mute</button>
+                    </div>
+                    <button id="skipForward" class="btn btn-warning">10s ></button>
+                </div>                
             </div>
         </div>
         <div class="row border-top pt-2">
@@ -27,7 +31,7 @@
                     </div>
                     <div class="col-4">
                         <input class="btn btn-warning" type="submit" value="Send" />
-                        <button type="button" class="btn btn-danger">
+                        <button type="button" class="btn btn-secondary">
                             <span id="unreadBadge" class="badge badge-light">0</span>
                         </button>
                     </div>
@@ -35,14 +39,20 @@
                 <div id="log" class="p-2 text-light"></div>
             </div>
             <div class="col-4 p-0">
-                <!-- list of videos -->
                 <form id="upload-video-form" class="form">
-                    <input autofocus autocomplete="off" id="video-url" class="form-control text-light bg-info" type="text" placeholder="Video URL"/>
-                    <input type="submit" class="mt-2 btn btn-warning">
+                    <div class="input-group mb-3">
+                        <input autofocus autocomplete="off" id="video-url" class="form-control text-light bg-info" type="text" placeholder="Video URL"/>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <input type="submit" class="btn btn-warning w-100" value="Upload">
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-danger w-100" id="cancel-upload-video-button">Cancel</button>
+                        </div>
+                    </div>
                 </form>                
-                <form id="cancel-upload-video-form" class="form">
-                    <input type="submit" value="Cancel" class="mt-2 btn btn-warning">
-                </form>
+                
                 <ul>
                     <li>
                         <div id="statusCard" style="display: none;" class="card bg-dark text-light" style="width: 18rem;">
@@ -147,12 +157,16 @@
                             var audio = new Audio('/static/sound/happy-pop.mp3');
                             audio.play();
                         }
-                        if (Array.isArray(data)) {
-                            for (var i = 0; i < data.length; i++) {
-                                appendMessage(data[i]);
+                        if(data.error!=undefined){
+                            appendErrorMessage(data);
+                        }else{
+                            if (Array.isArray(data)) {
+                                for (var i = 0; i < data.length; i++) {
+                                    appendMessage(data[i]);
+                                }
+                            } else {
+                                appendMessage(data);
                             }
-                        } else {
-                            appendMessage(data);
                         }
                     };
                 } else {
@@ -187,20 +201,24 @@
             if (data ==null){
                 return;
             }
-            var date = new Date(data.CreatedAt);
+            var date = new Date(data.createdAt);
             var time = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-            var formattedMessage = "<span class='text-secondary'>" + time + "&nbsp;<b>" + data.Sender.charAt(0).toUpperCase() + data.Sender.slice(1) + "</b>:</span>&nbsp;<b style='font-size:18px;'>"+ data.Body+"</b>" ;
+            var formattedMessage = "<span class='text-secondary'>" + time + "&nbsp;<b>" + data.sender.charAt(0).toUpperCase() + data.sender.slice(1) + "</b>:</span>&nbsp;<b style='font-size:18px;'>"+ data.body+"</b>" ;
             var item = document.createElement("div");
             item.innerHTML = formattedMessage;
             appendLog(item);
             unreadMessages++;
             document.getElementById("unreadBadge").textContent = unreadMessages;
         }
+        function appendErrorMessage(data) {   
+            console.log("append Error Is Called")         
+            var formattedMessage = "<span class='text-secondary'><b>Error:</b></span>&nbsp;<b style='font-size:18px;'>"+ data.error+"</b>" ;
+            var item = document.createElement("div");
+            item.innerHTML = formattedMessage;
+            appendLog(item);
+        }
 
-
-            
         var videoPlayer = document.getElementById('videoPlayer');
-        videoPlayer.muted = true;
 
         var skipBackwardButton = document.getElementById('skipBackward');
         var skipForwardButton = document.getElementById('skipForward');
@@ -217,6 +235,7 @@
 
         videoPlayer.addEventListener('seeked', function() {
             var isPaused = this.paused;
+            console.log("seeked timeline ", this.currentTime); //TODO: Delete this line
             sendVideoStatus(isPaused, this.currentTime);
         });
 
@@ -226,6 +245,29 @@
 
         skipForwardButton.addEventListener('click', function() {
             videoPlayer.currentTime += 10;
+        });
+
+        var playPauseButton = document.getElementById('playPauseButton');
+        var muteUnmuteButton = document.getElementById('muteUnmuteButton');
+
+        playPauseButton.addEventListener('click', function() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+                playPauseButton.textContent = 'Pause'; // Change button text to 'Pause'
+            } else {
+                videoPlayer.pause();
+                playPauseButton.textContent = 'Play'; // Change button text to 'Play'
+            }
+        });
+
+        muteUnmuteButton.addEventListener('click', function() {
+            if (videoPlayer.muted) {
+                videoPlayer.muted = false;
+                muteUnmuteButton.textContent = 'Mute'; // Change button text to 'Mute'
+            } else {
+                videoPlayer.muted = true;
+                muteUnmuteButton.textContent = 'Unmute'; // Change button text to 'Unmute'
+            }
         });
 
         function sendVideoStatus(isPaused, currentTime) {
@@ -277,14 +319,14 @@
                 var timeInSeconds = hours * 3600 + minutes * 60 + seconds;
                 
                 videoPlayer.currentTime = timeInSeconds;
-                FinalPause = data.pause;
+                // FinalPause = data.pause;
                 if (data.pause) {
                     console.log("pause the video")
-                    videoPlayer.muted = false; 
+                    // videoPlayer.muted = false; 
                 } else {
                     console.log("play the video")
-                    videoPlayer.play();
-                    videoPlayer.muted = false; 
+                    // videoPlayer.play();
+                    // videoPlayer.muted = false; 
                 }
             })
             .catch((error) => {
@@ -374,7 +416,7 @@
         }, 2000);  //TODO: Change this Check every 2 seconds
 
 
-        document.getElementById('cancel-upload-video-form').addEventListener('submit', function(e) {
+        document.getElementById('cancel-upload-video-button').addEventListener('click', function(e) {
             e.preventDefault();  // Prevent the form from submitting normally
 
             fetch('/video/cancel-upload', {
