@@ -56,7 +56,6 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 		if fullName != vc.User {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
-		// log.Printf("Set valid video %+v\n", vc)
 	}
 
 	{
@@ -68,9 +67,11 @@ func (u *Video) PostSetVideoControllers(c *fiber.Ctx) error {
 			log.Printf("setVideoControllers save error %s", err)
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
+		//log.Printf("set timeline: %+v\n", vc) //TODO: delete this line
 	}
 	return nil
 }
+
 func (u *Video) PostGetVideoControllers(c *fiber.Ctx) error {
 	var userFullName = c.Locals("userFullName")
 	fullName, ok := userFullName.(string)
@@ -78,12 +79,12 @@ func (u *Video) PostGetVideoControllers(c *fiber.Ctx) error {
 		log.Printf("PostGetVideoControllers invalid userFullName error")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	// log.Printf("video PostGetVideo user is %s", fullName)
 	usrVideoInto, err := u.Store.GetUserVideoInfo(c.Context(), model.User{FullName: fullName})
 	if err != nil {
 		log.Printf("PostGetVideoControllers store error %s\n", err.Error())
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
+	// log.Printf("get timeline: user:%s data: %+v\n", userFullName, usrVideoInto) //TODO: delete this line
 	return c.JSON(usrVideoInto)
 }
 
@@ -155,14 +156,11 @@ func (u *Video) download(ctx context.Context, url model.UploadedVideo, user stri
 		return
 	}
 
-	// fmt.Print("\nDownload complete.\n")
 	err = os.Rename(DownloadDistention, DefaultVideoPath)
 	if err != nil {
 		fmt.Println("Error moving file:", err)
 		return
 	}
-
-	// fmt.Print("\nFile moved successfully.\n")
 }
 
 func (u *Video) uuidResponse(uuid string) map[string]string {
@@ -197,6 +195,7 @@ func (u *Video) PostUpload(c *fiber.Ctx) error {
 			log.Printf("PostUpload json parse error %s", err)
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
+		log.Printf("postUpload: %+v\n", rup)
 
 	}
 	{
@@ -232,6 +231,7 @@ func (u *Video) PostUploadStatus(c *fiber.Ctx) error {
 }
 
 func (u *Video) PostCancelUpload(c *fiber.Ctx) error {
+	log.Printf("download gets canceled")
 	if u.cancelFunc != nil {
 		u.cancelFunc()
 	} else {
