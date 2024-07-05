@@ -17,6 +17,7 @@ type Config struct {
 	UserPassword  string
 	JWTSecret     string
 	JWtExpireTime uint64
+	Domain        string
 }
 
 func (c *Config) Read() error {
@@ -38,6 +39,7 @@ func (c *Config) Read() error {
 	c.RedisChatExp = os.Getenv("REDIS_CHAT_EXP")
 	c.UserPassword = os.Getenv("USER_PASSWORD")
 	c.JWTSecret = os.Getenv("JWT_SECRET")
+	c.Domain = os.Getenv("DOMAIN")
 	c.JWtExpireTime, err = strconv.ParseUint(os.Getenv("JWT_EXPIRE_TIME"), 10, 64)
 	if err != nil {
 		return err

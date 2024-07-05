@@ -99,7 +99,7 @@ func (a *Auth) setTokenCookie(c *fiber.Ctx, token string) {
 		Secure:   true,
 		SameSite: fiber.CookieSameSiteStrictMode,
 		Path:     path,
-		// Domain:   "online-video-player.ir", //TODO: take it from the configuration
+		Domain:   a.Cfg.Domain,
 	})
 }
 
